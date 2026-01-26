@@ -120,7 +120,7 @@ everything-claude-code/
 
 ```bash
 # このリポジトリをマーケットプレイスとして追加
-/plugin marketplace add affaan-m/everything-claude-code
+/plugin marketplace add nisioka/everything-claude-code
 
 # プラグインをインストール
 /plugin install everything-claude-code@everything-claude-code
@@ -134,7 +134,7 @@ everything-claude-code/
     "everything-claude-code": {
       "source": {
         "source": "github",
-        "repo": "affaan-m/everything-claude-code"
+        "repo": "nisioka/everything-claude-code"
       }
     }
   },
@@ -154,7 +154,7 @@ everything-claude-code/
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/nisioka/everything-claude-code.git
 
 # エージェントをClaude設定にコピー
 cp everything-claude-code/agents/*.md ~/.claude/agents/

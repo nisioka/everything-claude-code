@@ -121,7 +121,7 @@ The easiest way to use this repo - install as a Claude Code plugin:
 
 ```bash
 # Add this repo as a marketplace
-/plugin marketplace add affaan-m/everything-claude-code
+/plugin marketplace add nisioka/everything-claude-code
 
 # Install the plugin
 /plugin install everything-claude-code@everything-claude-code
@@ -135,7 +135,7 @@ Or add directly to your `~/.claude/settings.json`:
     "everything-claude-code": {
       "source": {
         "source": "github",
-        "repo": "affaan-m/everything-claude-code"
+        "repo": "nisioka/everything-claude-code"
       }
     }
   },
@@ -155,7 +155,7 @@ If you prefer manual control over what's installed:
 
 ```bash
 # Clone the repo
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/nisioka/everything-claude-code.git
 
 # Copy agents to your Claude config
 cp everything-claude-code/agents/*.md ~/.claude/agents/
