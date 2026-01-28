@@ -81,6 +81,10 @@ everything-claude-code/
 |   |-- learn.md            # /learn - セッション中にパターンを抽出（ロングフォームガイド）
 |   |-- checkpoint.md       # /checkpoint - 検証状態を保存（ロングフォームガイド）
 |   |-- verify.md           # /verify - 検証ループを実行（ロングフォームガイド）
+|   |-- my/                  # カスタムコマンド
+|   |   |-- spec-impl.md          # /my:spec-impl - TDD実装＋レビューループ＋PR作成
+|   |   |-- convert-spec-to-doc.md # /my:convert-spec-to-doc - kiro仕様書をドキュメントに変換
+|   |   |-- generate-test-plan.md  # /my:generate-test-plan - 変更内容からテスト観点を生成
 |
 |-- rules/            # 常に従うガイドライン（~/.claude/rules/にコピー）
 |   |-- security.md         # 必須セキュリティチェック
@@ -124,6 +128,9 @@ everything-claude-code/
 
 # プラグインをインストール
 /plugin install everything-claude-code@everything-claude-code
+
+# for update
+claude plugin update ecc@everything-claude-code
 ```
 
 または`~/.claude/settings.json`に直接追加：

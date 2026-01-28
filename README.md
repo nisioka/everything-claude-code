@@ -82,6 +82,10 @@ everything-claude-code/
 |   |-- learn.md            # /learn - Extract patterns mid-session (Longform Guide)
 |   |-- checkpoint.md       # /checkpoint - Save verification state (Longform Guide)
 |   |-- verify.md           # /verify - Run verification loop (Longform Guide)
+|   |-- my/                  # Custom commands
+|   |   |-- spec-impl.md          # /my:spec-impl - TDD implementation with review loop & PR
+|   |   |-- convert-spec-to-doc.md # /my:convert-spec-to-doc - Convert kiro spec to docs
+|   |   |-- generate-test-plan.md  # /my:generate-test-plan - Generate test plan from changes
 |
 |-- rules/            # Always-follow guidelines (copy to ~/.claude/rules/)
 |   |-- security.md         # Mandatory security checks
