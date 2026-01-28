@@ -124,7 +124,10 @@ The easiest way to use this repo - install as a Claude Code plugin:
 /plugin marketplace add nisioka/everything-claude-code
 
 # Install the plugin
-/plugin install everything-claude-code@everything-claude-code
+/plugin install ecc@everything-claude-code
+
+# for update
+claude plugin update ecc@everything-claude-code
 ```
 
 Or add directly to your `~/.claude/settings.json`:
