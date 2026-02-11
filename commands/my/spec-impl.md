@@ -94,6 +94,10 @@ For each selected task:
 | ビルド/型エラー修正 | `ecc:build-error-resolver` | ビルドエラーや型エラーの修正 |
 | リファクタリング/デッドコード削除 | `ecc:refactor-cleaner` | コード整理・不要コード削除 |
 | セキュリティ対応 | `ecc:security-reviewer` | 認証・入力検証・脆弱性対応 |
+| Kotlin/Quarkus実装 | `ecc:kotlin-coder` | Kotlin実装、Quarkus設定、native image対応 |
+| SQL/スキーマ設計 | `ecc:sql-coder` | SQL記述、マイグレーション、クエリ最適化 |
+| JPA/Hibernateエンティティ | `ecc:jpa-model-coder` | エンティティ設計、リレーション、N+1対策 |
+| TypeScript/Next.js実装 | `ecc:nextjs-coder` | React/Next.js 16コンポーネント、Server Actions、API routes |
 
 ```markdown
 Task tool を使用:
