@@ -600,23 +600,4 @@ describe("AddToCartButton", () => {
 | `experimental.ppr` config | Use `experimental.cacheComponents` instead |
 | Missing `default.tsx` in parallel routes | Required in Next.js 16 |
 
-## Build & Run
-
-```bash
-# Development (Turbopack is default)
-npm run dev
-
-# Development with Webpack (opt-out from Turbopack)
-npm run dev -- --webpack
-
-# Build
-npm run build
-
-# Type check
-npx tsc --noEmit
-
-# Test
-npm test
-```
-
 **Remember**: Server Components first. `"use cache"` for explicit caching. `proxy.ts` replaces middleware. All dynamic APIs (`params`, `headers()`, `cookies()`) must be awaited. React Compiler handles memoization automatically.

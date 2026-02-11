@@ -356,30 +356,4 @@ class UserResourceNativeIT : UserResourceTest()
 | Dynamic class loading / `Class.forName` | Resolve all types at build time |
 | `ServiceLoader` without configuration | Register services in `META-INF/native-image/` |
 
-## Build & Run
-
-```bash
-# Development (JVM mode with hot reload)
-./gradlew quarkusDev
-
-# Build JVM jar
-./gradlew build
-
-# Build native image (container-based, no local GraalVM needed)
-./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
-
-# Run native executable
-./build/*-runner
-
-# Test (JVM)
-./gradlew test
-
-# Test (native image) - MUST run to validate native compatibility
-./gradlew testNative
-
-# Lint (ktlint / detekt)
-./gradlew ktlintCheck
-./gradlew detekt
-```
-
 **Remember**: Native image first. Every DTO needs `@RegisterForReflection`. Every class that CDI proxies needs `all-open`. Test in both JVM and native modes. If it works in JVM but fails in native, you have a reflection or initialization problem.
