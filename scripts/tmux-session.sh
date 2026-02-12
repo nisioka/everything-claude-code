@@ -68,7 +68,7 @@ esac
 # --- Determine session name ---
 BRANCH="${1:-$(get_branch)}"
 SESSION=$(sanitize_session_name "$BRANCH")
-PROJECT_DIR="$(pwd)"
+PROJECT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 
 # --- Attach if session exists ---
 if tmux has-session -t "$SESSION" 2>/dev/null; then
