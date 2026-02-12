@@ -31,6 +31,43 @@ tmux list-panes -F "#{pane_index} #{pane_title}" 2>/dev/null
 ```
 
 If this returns nothing, the tmux session has not been initialized.
+Guide the user through setup using the instructions below.
+
+## Setup (when session is not detected)
+
+The setup script is bundled with this skill. When the session is not found:
+
+1. Resolve the script path: this skill's base directory is in the system prompt
+   as "Base directory for this skill: ...". The script is at `../../scripts/tmux-session.sh`
+   relative to that directory.
+2. Check if `tmux-dev-session` is already available on the user's PATH.
+3. If not, guide the user to copy the script to a PATH-accessible location (one-time setup):
+
+```
+tmux-dev-session コマンドが見つかりません。初回セットアップとして以下を実行してください：
+
+  cp <resolved-path>/scripts/tmux-session.sh ~/.local/bin/tmux-dev-session
+  chmod +x ~/.local/bin/tmux-dev-session
+
+セットアップ後、新しいターミナルで以下を実行してください：
+
+  tmux-dev-session
+
+セッション起動後、左のclaudeペインで `claude` を起動してください。
+```
+
+4. If `tmux-dev-session` is already on PATH but session is not running, simply instruct:
+
+```
+新しいターミナルで以下を実行してください：
+
+  tmux-dev-session
+
+セッション起動後、左のclaudeペインで `claude` を起動してください。
+```
+
+Do NOT attempt to run the script yourself, as it requires `tmux attach` which
+conflicts with the current Claude Code session.
 
 ## Sending Commands to Panes
 
