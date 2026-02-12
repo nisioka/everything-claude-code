@@ -61,16 +61,18 @@ tmux capture-pane -t test-1 -p -S -
 
 ### Run Tests After Code Changes
 
-1. Send test command to a test pane
-2. Wait briefly for execution
+1. Send test command with a completion marker to a test pane
+2. Poll for the marker to detect completion
 3. Capture output to check results
 
 ```bash
-# Step 1: send
-tmux send-keys -t test-1 "npm test -- --testPathPattern=auth" Enter
+# Step 1: send command with completion marker
+tmux send-keys -t test-1 'npm test -- --testPathPattern=auth; echo "--TEST-COMPLETE--"' Enter
 
-# Step 2: wait for completion
-sleep 5
+# Step 2: wait for completion marker
+while ! tmux capture-pane -p -t test-1 | grep -q -- --TEST-COMPLETE--; do
+  sleep 1
+done
 
 # Step 3: read result
 tmux capture-pane -t test-1 -p -S -30
@@ -96,6 +98,6 @@ tmux list-panes -F "#{pane_title}: #{pane_current_command}"
 
 - **Never send commands to the `claude` pane** - that is your own session
 - **Always capture output after sending commands** - confirm success/failure
-- **Use `sleep` between send and capture** - allow time for execution
+- **Use completion markers instead of `sleep`** - append `; echo "--MARKER--"` to commands and poll with `grep` for reliable completion detection
 - **Prefer `test-1` for primary tests, `test-2` for secondary** - keep organized
 - **Send `C-c` before new commands** if a previous process may still be running
