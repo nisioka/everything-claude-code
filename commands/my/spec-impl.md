@@ -98,6 +98,7 @@ For each selected task:
 | SQL/スキーマ設計 | `ecc:sql-coder` | SQL記述、マイグレーション、クエリ最適化 |
 | JPA/Hibernateエンティティ | `ecc:jpa-model-coder` | エンティティ設計、リレーション、N+1対策 |
 | TypeScript/Next.js実装 | `ecc:nextjs-coder` | React/Next.js 16コンポーネント、Server Actions、API routes |
+| Terraform/IaC実装 | `ecc:terraform-coder` | Terraform設定、モジュール設計、クラウドインフラ、状態管理 |
 
 ```markdown
 Task tool を使用:
