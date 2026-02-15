@@ -101,6 +101,21 @@ Return a structured summary in the following format.
 - <comment summary> (by <author>)
 ```
 
+### Step 5: Request Re-Review After Push
+
+修正をコミット・プッシュした後、レビューボットに再レビューを依頼する。
+対象の PR 番号に対して以下のコマンドを実行する:
+
+```bash
+# Gemini Code Assist に再レビューを依頼
+gh pr comment {pr_number} --body "/gemini review"
+```
+
+**注意事項**:
+- 再レビュー依頼はプッシュが完了した後に実行すること（プッシュ前に投稿しても古いコードがレビューされる）
+- Gemini のレビュー完了まで約5分かかるため、ループで再確認する場合は十分な待機時間を設けること
+- Gemini 以外のボット（CodeRabbit 等）が導入されている場合は、そのボットの再レビューコマンドも併せて実行する
+
 ## Important Notes
 
 - Always preserve the original comment text (as blockquote) so the implementing agent has full context
