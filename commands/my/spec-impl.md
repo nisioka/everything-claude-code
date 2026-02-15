@@ -14,6 +14,7 @@ argument-hint: <feature-name> [task-numbers]
   - 品質レビュー（リファクタリング、カバレッジ、検証、コードレビュー）の全指摘に対応
   - レビュー指摘はタスク化し、サブエージェントで修正（フィードバックループ）
   - PRが作成される
+  - PR作成/Push後のボットレビューコメントにも自動対応（PHASE 4）
 </background_information>
 
 <instructions>
@@ -49,6 +50,18 @@ argument-hint: <feature-name> [task-numbers]
 │  PHASE 3: PR作成                                                 │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │  gh pr create でプルリクエストを作成                        │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              ↓                                   │
+│  PHASE 4: PRレビューコメント対応（ボットレビュー自動対応）      │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  1. 5分間待機（ボットレビュー完了待ち）                    │ │
+│  │  2. pr-review-responder agent → コメント取得・解析         │ │
+│  │  3. 指摘をタスク化 → tasks.md に追記                       │ │
+│  │  4. 適切なサブエージェントに委任して修正                    │ │
+│  │  5. コミット＆プッシュ                                     │ │
+│  │     ↓                                                      │ │
+│  │  再度5分待機 → 新コメントあり → 修正ループ（上限2回）     │ │
+│  │  新コメントなし → 完了                                     │ │
 │  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -239,7 +252,7 @@ code-reviewer エージェントを起動:
 # プッシュ
 git push -u origin <current-branch>
 
-# PR作成
+# PR作成（既存PRがある場合はスキップ）
 gh pr create --title "[Feature] $1 の実装" --body "$(cat <<'EOF'
 ## Summary
 - [実装内容の要約]
@@ -258,6 +271,113 @@ gh pr create --title "[Feature] $1 の実装" --body "$(cat <<'EOF'
 EOF
 )"
 ```
+
+PR番号を取得して PHASE 4 に渡す:
+```bash
+PR_NUMBER=$(gh pr view --json number -q '.number')
+```
+
+---
+
+### PHASE 4: PRレビューコメント対応（ボットレビュー自動対応）
+
+PR作成後（またはPush更新後）、自動レビューボット（CodeRabbit、Copilot等）のフィードバックに対応する。
+
+#### 4.1 レビュー待機
+
+ボットレビューの完了を待つため **5分間待機** する:
+
+```bash
+echo "⏳ ボットレビュー完了を待機中（5分）..."
+sleep 300
+```
+
+#### 4.2 レビューコメント取得・解析
+
+`pr-review-responder` エージェントを使用してPRのレビューコメントを取得・解析する:
+
+```markdown
+Task tool を使用:
+- prompt: "PR #<PR_NUMBER> のレビューコメントを取得・解析してください"
+- subagent_type: ecc:pr-review-responder
+- description: "Fetch PR review comments"
+```
+
+エージェントが返す構造化データ:
+- 各コメントの severity（CRITICAL / HIGH / MEDIUM / LOW）
+- カテゴリ（security, performance, code-quality, bug, style, testing）
+- 対象ファイル・行番号
+- 元のコメント本文
+
+#### 4.3 レビュー指摘のタスク化
+
+対応可能な指摘がある場合、tasks.md に追記:
+
+```markdown
+## PR Review Fixes (Round N)
+- [ ] [PR-Review] CRITICAL (security): XSS脆弱性の修正 (`src/api/handler.ts:42`)
+  > Original: "User input is not sanitized before rendering..."
+- [ ] [PR-Review] HIGH (performance): N+1クエリの解消 (`src/db/users.ts:15`)
+  > Original: "This query inside a loop causes N+1 problem..."
+- [ ] [PR-Review] MEDIUM (code-quality): エラーハンドリング追加 (`src/service.ts:88`)
+  > Original: "Missing error handling for edge case..."
+```
+
+#### 4.4 サブエージェントに委任して修正
+
+PHASE 1 と同じ要領で、各指摘を適切なサブエージェントに委任:
+
+| 指摘カテゴリ | subagent_type | 判断基準 |
+|---|---|---|
+| security | `ecc:security-reviewer` | セキュリティ脆弱性の修正 |
+| performance | 該当ドメインのエージェント | パフォーマンス改善 |
+| bug | `general-purpose` | バグ修正 |
+| code-quality | `ecc:refactor-cleaner` | コード品質改善 |
+| testing | `ecc:tdd-guide` | テスト追加・修正 |
+| style | `general-purpose` | スタイル・命名修正 |
+
+サブエージェントへの指示内容:
+- 元のレビューコメント本文（コンテキスト理解のため）
+- 対象ファイル・行番号
+- 修正方針
+
+#### 4.5 修正のコミット＆プッシュ
+
+全指摘の修正後:
+
+```bash
+# .kiro/ を除外してステージング
+git add --all -- ':!.kiro/'
+git commit -m "$(cat <<'EOF'
+fix: PRレビュー指摘対応 (Round N)
+
+- [修正内容の要約]
+EOF
+)"
+
+# プッシュ
+git push -u origin <current-branch>
+```
+
+#### 4.6 再レビュー確認ループ
+
+プッシュ後、再度ボットレビューが走る可能性があるため:
+
+1. **再度5分待機**
+2. **新しいコメントを取得**（前回取得時刻以降のコメントのみ）
+3. **新たな指摘があれば** → 4.3〜4.5 を繰り返す
+4. **新たな指摘がなければ** → 完了
+
+**ループ上限: 2回**（初回 + 再レビュー1回の計2ラウンド）
+
+上限到達時:
+- 残存する未対応コメントを最終レポートに記載
+- ユーザーに手動対応を促す
+
+#### 4.7 対応不要な場合
+
+`pr-review-responder` が「対応可能な指摘なし」と判断した場合:
+- PHASE 4 をスキップし、そのまま最終レポートに進む
 
 </instructions>
 
@@ -336,7 +456,14 @@ EOF
 ### PR
 - URL: https://github.com/...
 
+### PRレビューコメント対応（PHASE 4）
+- ボットレビュー: X件の指摘を検出
+- 対応済み: Y件
+- 残存（手動対応要）: Z件
+- ラウンド数: N/2
+
 ### 次のステップ
+- [ ] 残存PRレビューコメントの手動対応（あれば）
 - [ ] PRレビュー依頼
 - [ ] 関連ドキュメント更新
 ```
