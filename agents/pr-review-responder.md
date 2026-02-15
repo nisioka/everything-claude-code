@@ -12,23 +12,32 @@ You are a PR review comment analyst. Your job is to fetch review comments from a
 You will receive:
 - PR number or URL
 - Repository context (optional)
+- **since** (optional): ISO 8601 タイムスタンプ。指定された場合、この時刻以降に作成・更新されたコメントのみを対象とする。ループの2回目以降で古いコメントの重複処理を防ぐために使用される。
 
 ## Process
 
 ### Step 1: Fetch PR Review Comments
 
-Use `gh` CLI to fetch all review comments:
+Use `gh` CLI to fetch review comments. **`since` が指定されている場合は必ずクエリパラメータとして付与する。**
 
 ```bash
+# since が指定されている場合: ?since=<ISO8601> を付与
+# since が未指定の場合: クエリパラメータなし（全件取得）
+
 # Get PR review comments (inline comments)
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --paginate
+# NOTE: pulls/comments API は since パラメータ対応。updated_at >= since でフィルタされる
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments?since={since}" --paginate
 
 # Get PR reviews (top-level review bodies)
+# NOTE: reviews API は since 非対応のため、レスポンスの submitted_at を手動フィルタ
 gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate
 
 # Get issue comments (general PR comments, including bot summaries)
-gh api repos/{owner}/{repo}/issues/{pr_number}/comments --paginate
+# NOTE: issues/comments API は since パラメータ対応
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments?since={since}" --paginate
 ```
+
+**reviews API のフィルタ**: `since` が指定されている場合、取得した reviews の `submitted_at` フィールドを確認し、`since` より古いものは除外する。
 
 If owner/repo is unknown, use:
 ```bash
@@ -61,7 +70,8 @@ Severity inference rules:
 
 ### Step 4: Output Structured Result
 
-Return a structured summary in the following format:
+Return a structured summary in the following format.
+**`fetch_timestamp`** は必ず出力に含めること。呼び出し元がループ時の `since` 値として使用する。
 
 ```markdown
 ## PR Review Comments Summary
@@ -69,6 +79,7 @@ Return a structured summary in the following format:
 **PR**: #<number>
 **Total Comments**: X actionable (Y total)
 **Reviewers**: [list of reviewers]
+**Fetch Timestamp**: <ISO 8601 形式の現在時刻（例: 2025-01-15T10:30:00Z）>
 
 ### Actionable Items
 

@@ -294,7 +294,9 @@ sleep 300
 
 #### 4.2 レビューコメント取得・解析
 
-`pr-review-responder` エージェントを使用してPRのレビューコメントを取得・解析する:
+`pr-review-responder` エージェントを使用してPRのレビューコメントを取得・解析する。
+
+**初回呼び出し**（`since` なし = 全件取得）:
 
 ```markdown
 Task tool を使用:
@@ -303,11 +305,26 @@ Task tool を使用:
 - description: "Fetch PR review comments"
 ```
 
+**2回目以降の呼び出し**（`since` 指定 = 差分取得）:
+
+```markdown
+Task tool を使用:
+- prompt: "PR #<PR_NUMBER> のレビューコメントを取得・解析してください。since=<LAST_FETCH_TIMESTAMP> 以降の新規コメントのみ対象としてください"
+- subagent_type: ecc:pr-review-responder
+- description: "Fetch new PR review comments since <LAST_FETCH_TIMESTAMP>"
+```
+
+**タイムスタンプ管理**:
+- エージェントの出力に含まれる `Fetch Timestamp`（ISO 8601）を変数 `LAST_FETCH_TIMESTAMP` として保持する
+- 次回ループ（4.6）の再呼び出し時に `since` パラメータとして渡す
+- これにより、前回取得済みのコメントを重複処理することを防ぐ
+
 エージェントが返す構造化データ:
 - 各コメントの severity（CRITICAL / HIGH / MEDIUM / LOW）
 - カテゴリ（security, performance, code-quality, bug, style, testing）
 - 対象ファイル・行番号
 - 元のコメント本文
+- **Fetch Timestamp**（次回ループ用）
 
 #### 4.3 レビュー指摘のタスク化
 
@@ -364,8 +381,8 @@ git push -u origin <current-branch>
 プッシュ後、再度ボットレビューが走る可能性があるため:
 
 1. **再度5分待機**
-2. **新しいコメントを取得**（前回取得時刻以降のコメントのみ）
-3. **新たな指摘があれば** → 4.3〜4.5 を繰り返す
+2. **`LAST_FETCH_TIMESTAMP` を `since` として渡し、新しいコメントのみ取得**（4.2 の2回目以降の手順に従う）
+3. **新たな指摘があれば** → 4.3〜4.5 を繰り返す（`LAST_FETCH_TIMESTAMP` も更新される）
 4. **新たな指摘がなければ** → 完了
 
 **ループ上限: 2回**（初回 + 再レビュー1回の計2ラウンド）
