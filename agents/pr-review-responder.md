@@ -18,31 +18,29 @@ You will receive:
 
 ### Step 1: Fetch PR Review Comments
 
-Use `gh` CLI to fetch review comments. **`since` が指定されている場合は必ずクエリパラメータとして付与する。**
+`gh pr view` で1回の API コールでレビューとコメントを一括取得する（推奨）。
+owner/repo の明示が不要で、ネットワークリクエストも最小化される。
 
 ```bash
-# since が指定されている場合: ?since=<ISO8601> を付与
-# since が未指定の場合: クエリパラメータなし（全件取得）
-
-# Get PR review comments (inline comments)
-# NOTE: pulls/comments API は since パラメータ対応。updated_at >= since でフィルタされる
-gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments?since={since}" --paginate
-
-# Get PR reviews (top-level review bodies)
-# NOTE: reviews API は since 非対応のため、レスポンスの submitted_at を手動フィルタ
-gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate
-
-# Get issue comments (general PR comments, including bot summaries)
-# NOTE: issues/comments API は since パラメータ対応
-gh api "repos/{owner}/{repo}/issues/{pr_number}/comments?since={since}" --paginate
+# 推奨: 1回のコールでレビュー・コメントを一括取得
+gh pr view {pr_number} --json reviews,comments
 ```
 
-**reviews API のフィルタ**: `since` が指定されている場合、取得した reviews の `submitted_at` フィールドを確認し、`since` より古いものは除外する。
+JSON 出力には inline コメントとレビュー本文の両方が含まれる。これをパースして Step 2 以降の処理に渡す。
 
-If owner/repo is unknown, use:
+**`since` フィルタ**: `since` が指定されている場合、取得した JSON の各コメント/レビューの `createdAt` / `submittedAt` を確認し、`since` より古いものを除外する。
+
+**代替手段**: `gh pr view` で取得できない詳細情報（行番号、diff position 等）が必要な場合は `gh api` を個別に使用する:
+
 ```bash
-# Get from current git remote
-gh pr view {pr_number} --json url,reviewRequests,reviews,comments
+# inline コメント（since パラメータ対応）
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments?since={since}" --paginate
+
+# レビュー本文（since 非対応 → submitted_at で手動フィルタ）
+gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate
+
+# issue コメント / ボットサマリー（since パラメータ対応）
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments?since={since}" --paginate
 ```
 
 ### Step 2: Filter Actionable Comments
