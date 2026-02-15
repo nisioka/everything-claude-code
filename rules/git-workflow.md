@@ -43,3 +43,20 @@ When creating PRs:
 4. **Commit & Push**
    - Detailed commit messages
    - Follow conventional commits format
+
+## Versioning (Semantic Versioning)
+
+バージョンは `VERSION` ファイルで一元管理し、`scripts/sync-version.sh` で `.claude-plugin/` 配下に反映する。
+
+**機能改修・バグ修正時のバージョンアップは必須**:
+
+| 変更の規模 | バージョン | 判断基準 | 対応者 |
+|---|---|---|---|
+| バグ修正・軽微な改善 | **パッチ** (x.y.Z) | 既存機能の修正、ドキュメント改善、小規模な機能追加 | Claude が自律的に実行 |
+| 機能追加・既存機能の拡張 | **マイナー** (x.Y.0) | 新エージェント追加、新コマンド追加、ワークフローの大幅改善 | Claude が自律的に実行 |
+| 破壊的変更・大規模刷新 | **メジャー** (X.0.0) | 互換性のない変更、アーキテクチャ刷新、大規模リファクタリング | **ユーザーに相談してから実行** |
+
+**手順**:
+1. `VERSION` ファイルのバージョンをインクリメント
+2. `scripts/sync-version.sh` を実行して全ファイルに反映
+3. バージョン変更を含めてコミット
