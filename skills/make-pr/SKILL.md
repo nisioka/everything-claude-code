@@ -166,7 +166,7 @@ If the current branch follows the pattern `<prefix>/<TICKET_ID>-<description>`:
 
 **Regex pattern for extraction:**
 ```
-^[^/]+/([A-Za-z]+-?\d+)
+^[^/]+/([A-Z]+-?\d+)
 ```
 
 **Examples:**
