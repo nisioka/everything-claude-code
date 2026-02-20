@@ -96,29 +96,10 @@ For each selected task:
 
 **Important**: 各タスクは独立したサブエージェントで実行する（コンテキスト分離のため）
 
-**エージェントタイプの選択**: タスクの内容に応じて最適な `subagent_type` を判断する。
+`skills/agent-router/SKILL.md` の **Task-Type Routing Table** に従って、タスクの内容に応じて最適な `subagent_type` を選択する。
 多くは `general-purpose` で問題ないが、明確に適したエージェントがある場合はそちらを優先する。
 
-| タスクの性質 | subagent_type | 判断基準 |
-|---|---|---|
-| 一般的な機能実装 | `general-purpose` | デフォルト。複合的なタスク |
-| テスト実装が主体 | `ecc:tdd-guide` | テストの追加・修正が中心のタスク |
-| E2Eテスト | `ecc:e2e-runner` | Playwrightを使ったE2Eテスト |
-| ビルド/型エラー修正 | `ecc:build-error-resolver` | ビルドエラーや型エラーの修正 |
-| リファクタリング/デッドコード削除 | `ecc:refactor-cleaner` | コード整理・不要コード削除 |
-| セキュリティ対応 | `ecc:security-reviewer` | 認証・入力検証・脆弱性対応 |
-| Kotlin/Quarkus実装 | `ecc:kotlin-coder` | Kotlin実装、Quarkus設定、native image対応 |
-| SQL/スキーマ設計 | `ecc:sql-coder` | SQL記述、マイグレーション、クエリ最適化 |
-| JPA/Hibernateエンティティ | `ecc:jpa-model-coder` | エンティティ設計、リレーション、N+1対策 |
-| TypeScript/Next.js実装 | `ecc:nextjs-coder` | React/Next.js 16コンポーネント、Server Actions、API routes |
-| Terraform/IaC実装 | `ecc:terraform-coder` | Terraform設定、モジュール設計、クラウドインフラ、状態管理 |
-
-```markdown
-Task tool を使用:
-- prompt: タスク説明 + 関連コンテキスト
-- subagent_type: （上記テーブルから適切なものを選択）
-- description: "Implement task X.Y"
-```
+agent-router スキルの **Standard Invocation Pattern** に従って Task tool を呼び出す。
 
 サブエージェントへの指示内容:
 - タスクの具体的な実装内容
@@ -232,7 +213,7 @@ code-reviewer エージェントを起動:
 
 2. **PHASE 1 に戻る**:
    - 追記したレビュー指摘タスクを対象として PHASE 1 を再実行
-   - サブエージェントのタイプは指摘内容に応じて選択（例: セキュリティ指摘なら `ecc:security-reviewer`）
+   - サブエージェントのタイプは `skills/agent-router/SKILL.md` の **Review-Category Routing Table** に従って選択する
 
 3. **再度 PHASE 2 を実行**:
    - レビュー指摘の修正完了後、PHASE 2.1〜2.4 を再実行
@@ -342,18 +323,9 @@ Task tool を使用:
 
 #### 4.4 サブエージェントに委任して修正
 
-PHASE 1 と同じ要領で、各指摘を適切なサブエージェントに委任:
+`skills/agent-router/SKILL.md` の **Review-Category Routing Table** に従って、各指摘を適切なサブエージェントに委任する。
 
-| 指摘カテゴリ | subagent_type | 判断基準 |
-|---|---|---|
-| security | `ecc:security-reviewer` | セキュリティ脆弱性の修正 |
-| performance | 該当ドメインのエージェント | パフォーマンス改善 |
-| bug | `general-purpose` | バグ修正 |
-| code-quality | `ecc:refactor-cleaner` | コード品質改善 |
-| testing | `ecc:tdd-guide` | テスト追加・修正 |
-| style | `general-purpose` | スタイル・命名修正 |
-
-サブエージェントへの指示内容:
+サブエージェントへの指示内容は agent-router スキルの **Standard Invocation Pattern** に従い、以下を含める:
 - 元のレビューコメント本文（コンテキスト理解のため）
 - 対象ファイル・行番号
 - 修正方針

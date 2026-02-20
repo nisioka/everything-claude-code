@@ -21,6 +21,7 @@ This skill defines the complete workflow for committing changes, pushing to remo
 2. Stage & Commit
 3. Push
 4. Pull Request creation
+5. Post-PR Bot Review Response
 ```
 
 ---
@@ -259,6 +260,120 @@ Ask the user whether they want a regular PR or a draft PR.
 
 ---
 
+## Phase 5: Post-PR Bot Review Response
+
+PR作成後、自動レビューボット（Gemini Code Assist 等）のフィードバックに対応する。
+
+### 5.1 レビュー待機
+
+ボットレビューの完了を待つため **5分間待機** する:
+
+```bash
+echo "⏳ ボットレビュー完了を待機中（5分）..."
+sleep 300
+```
+
+### 5.2 レビューコメント取得・解析
+
+`pr-review-responder` エージェントを使用してPRのレビューコメントを取得・解析する。
+
+**初回呼び出し**（`since` なし = 全件取得）:
+
+```markdown
+Task tool を使用:
+- prompt: "PR #<PR_NUMBER> のレビューコメントを取得・解析してください"
+- subagent_type: ecc:pr-review-responder
+- description: "Fetch PR review comments"
+```
+
+**2回目以降の呼び出し**（`since` 指定 = 差分取得）:
+
+```markdown
+Task tool を使用:
+- prompt: "PR #<PR_NUMBER> のレビューコメントを取得・解析してください。since=<LAST_FETCH_TIMESTAMP> 以降の新規コメントのみ対象としてください"
+- subagent_type: ecc:pr-review-responder
+- description: "Fetch new PR review comments since <LAST_FETCH_TIMESTAMP>"
+```
+
+**タイムスタンプ管理**:
+- エージェントの出力に含まれる `Fetch Timestamp`（ISO 8601）を変数 `LAST_FETCH_TIMESTAMP` として保持する
+- 次回ループ（5.7）の再呼び出し時に `since` パラメータとして渡す
+- これにより、前回取得済みのコメントを重複処理することを防ぐ
+
+エージェントが返す構造化データ:
+- 各コメントの severity（CRITICAL / HIGH / MEDIUM / LOW）
+- カテゴリ（security, performance, code-quality, bug, style, testing）
+- 対象ファイル・行番号
+- 元のコメント本文
+- **Fetch Timestamp**（次回ループ用）
+
+### 5.3 ユーザー確認
+
+検出された指摘をユーザーに提示し、対応方針を確認する:
+
+- 各指摘の severity、カテゴリ、概要を一覧表示
+- ユーザーに「全て対応」「選択して対応」「スキップ」を選択させる
+- ユーザーが選択した指摘のみ修正対象とする
+
+### 5.4 サブエージェントに委任して修正
+
+`skills/agent-router/SKILL.md` の **Review-Category Routing Table** に従って、各指摘を適切なサブエージェントに委任する。
+
+サブエージェントへの指示内容は agent-router スキルの **Standard Invocation Pattern** に従い、以下を含める:
+- 元のレビューコメント本文（コンテキスト理解のため）
+- 対象ファイル・行番号
+- 修正方針
+
+### 5.5 修正のコミット＆プッシュ
+
+全指摘の修正後:
+
+```bash
+git add <modified-files>
+git commit -m "$(cat <<'EOF'
+fix: PRレビュー指摘対応 (Round N)
+
+- [修正内容の要約]
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+EOF
+)"
+
+git push -u origin <branch-name>
+```
+
+**エラーハンドリング**: プッシュ失敗時は Phase 3.3 と同じルールに従う（即時停止してユーザーに報告）。
+
+### 5.6 再レビュー依頼
+
+プッシュ完了後、レビューボットに再レビューを依頼する:
+
+```bash
+gh pr comment <PR_NUMBER> --body "/gemini review"
+```
+
+### 5.7 再レビュー確認ループ
+
+プッシュ後、再度ボットレビューが走る可能性があるため:
+
+1. **再度5分待機**
+2. **`LAST_FETCH_TIMESTAMP` を `since` として渡し、新しいコメントのみ取得**（5.2 の2回目以降の手順に従う）
+3. **新たな指摘があれば** → 5.3〜5.6 を繰り返す（`LAST_FETCH_TIMESTAMP` も更新される）
+4. **新たな指摘がなければ** → 完了
+
+**ループ上限: 2回**（初回 + 再レビュー1回の計2ラウンド）
+
+上限到達時:
+- 残存する未対応コメントを最終レポートに記載
+- ユーザーに手動対応を促す
+
+### 5.8 対応不要な場合
+
+`pr-review-responder` が「対応可能な指摘なし」と判断した場合:
+- Phase 5 をスキップし、そのまま完了とする
+
+---
+
 ## Complete Workflow Checklist
 
 ```
@@ -286,6 +401,16 @@ PULL REQUEST:
   [ ] Check for conflicts with base branch
   [ ] Create PR (or draft PR)
   [ ] Report PR URL to user
+
+BOT REVIEW RESPONSE:
+  [ ] Wait 5 minutes for bot review
+  [ ] Fetch and analyze review comments (pr-review-responder)
+  [ ] Present findings to user for confirmation
+  [ ] Delegate fixes to appropriate sub-agents
+  [ ] Commit and push fixes
+  [ ] Request re-review (/gemini review)
+  [ ] Re-check loop (max 2 rounds)
+  [ ] Report final status to user
 ```
 
 ---
@@ -301,6 +426,11 @@ PULL REQUEST:
 | Merge conflicts with base | Warn user, ask if proceed |
 | No remote base branch found | Ask user which branch to target |
 | `gh` CLI not available | Report error, provide manual PR URL |
+| Bot review fetch fails | Warn user, skip Phase 5 |
+| Bot review loop limit reached (2 rounds) | Report remaining issues, ask user for manual review |
+| Sub-agent fix fails | Report error, mark as unresolved, continue with next item |
+| Push fails during bot review fix (Phase 5.5) | Follow Phase 3.3 rules: STOP and ask user |
+| Re-review request fails (`gh pr comment`) | Warn user, continue to next loop iteration |
 
 ---
 
