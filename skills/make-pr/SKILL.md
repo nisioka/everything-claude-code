@@ -1,5 +1,5 @@
 ---
-name: git-workflow
+name: make-pr
 description: Use this skill when performing the git workflow of commit, push, and pull request creation. Handles staged file selection, commit message generation, push with error handling, and PR creation with template support and ticket number extraction.
 ---
 
