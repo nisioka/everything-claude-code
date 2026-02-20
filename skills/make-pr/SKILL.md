@@ -335,7 +335,7 @@ fix: PRレビュー指摘対応 (Round N)
 
 - [修正内容の要約]
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Agent <noreply@anthropic.com>
 EOF
 )"
 
@@ -346,11 +346,14 @@ git push -u origin <branch-name>
 
 ### 5.6 再レビュー依頼
 
-プッシュ完了後、レビューボットに再レビューを依頼する:
+プッシュ完了後、レビューボットに再レビューを依頼する。使用するコマンドはプロジェクトに導入されているレビューボットに応じて選択する:
 
-```bash
-gh pr comment <PR_NUMBER> --body "/gemini review"
-```
+| Review Bot | Command |
+|---|---|
+| Gemini Code Assist | `gh pr comment <PR_NUMBER> --body "/gemini review"` |
+| CodeRabbit | `gh pr comment <PR_NUMBER> --body "@coderabbitai review"` |
+
+プロジェクトの PR 履歴やボット設定を確認し、適切なコマンドを使用すること。複数のボットが導入されている場合は、それぞれに再レビューを依頼する。
 
 ### 5.7 再レビュー確認ループ
 
