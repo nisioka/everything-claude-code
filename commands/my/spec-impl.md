@@ -1,7 +1,7 @@
 ---
 description: Execute spec tasks using TDD with quality review and PR creation
 allowed-tools: Bash, Read, Write, Edit, MultiEdit, Grep, Glob, LS, WebFetch, WebSearch, Task
-argument-hint: <feature-name> [task-numbers]
+argument-hint: <feature-name> [task-numbers] [-y]
 ---
 
 # Smart Implementation Executor
@@ -80,7 +80,8 @@ Execute implementation tasks for feature **$1** using Test-Driven Development.
 - `.kiro/steering/` directory for project memory
 
 **Validate approvals**:
-- Verify tasks are approved in spec.json (stop if not)
+- If `-y` flag provided: Auto-approve tasks in spec.json (`approvals.tasks.approved: true` に設定)
+- Otherwise: Verify tasks are approved in spec.json (stop if not)
 
 **Determine tasks to execute**:
 - If `$2` provided: Execute specified task numbers (e.g., "1.1" or "1,2,3")
@@ -402,7 +403,7 @@ git push -u origin <current-branch>
 
 ### Tasks Not Approved or Missing Spec Files
 - **Stop Execution**: All spec files must exist and tasks must be approved
-- **Suggested Action**: "Complete previous phases: `/kiro:spec-requirements`, `/kiro:spec-design`, `/kiro:spec-tasks`"
+- **Suggested Action**: "Run `/my:spec-impl $1 -y` to auto-approve tasks and proceed, or complete previous phases: `/kiro:spec-requirements`, `/kiro:spec-design`, `/kiro:spec-tasks`"
 
 ### Task Execution Examples
 
@@ -412,6 +413,10 @@ git push -u origin <current-branch>
 
 **Execute all pending (default)**:
 - `/my:spec-impl feature-name` - All unchecked tasks
+
+**Auto-approve tasks and execute**:
+- `/my:spec-impl feature-name -y` - Auto-approve and execute all pending
+- `/my:spec-impl feature-name 1,2 -y` - Auto-approve and execute specific tasks
 
 ## Output Description
 
