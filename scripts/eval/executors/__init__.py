@@ -6,6 +6,7 @@ registry. AnthropicExecutor is added in task 6 the same way.
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -13,6 +14,8 @@ from pydantic import BaseModel, ConfigDict
 
 from scripts.eval.errors import UnknownExecutorError
 from scripts.eval.usage import UsageSnapshot
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionResult(BaseModel):
@@ -47,6 +50,13 @@ EXECUTOR_REGISTRY: dict[str, type[Executor]] = {}
 
 
 def register_executor(name: str, cls: type[Executor]) -> None:
+    if name in EXECUTOR_REGISTRY and EXECUTOR_REGISTRY[name] is not cls:
+        logger.warning(
+            "executor name %r already registered as %s; overwriting with %s",
+            name,
+            EXECUTOR_REGISTRY[name].__name__,
+            cls.__name__,
+        )
     EXECUTOR_REGISTRY[name] = cls
 
 

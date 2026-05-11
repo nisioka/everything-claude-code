@@ -215,3 +215,33 @@ def test_missing_fixture_raises(tmp_path: Path) -> None:
 def test_missing_yaml_file_raises(tmp_path: Path) -> None:
     with pytest.raises(ConfigValidationError):
         ConfigLoader().load(tmp_path / "does-not-exist.yaml")
+
+
+def test_fixture_path_traversal_is_rejected(tmp_path: Path) -> None:
+    """Security regression: fixture paths must stay within the eval.yaml directory."""
+    eval_dir = tmp_path / "evals"
+    eval_dir.mkdir()
+    # Plant a "secret" outside the eval dir to confirm it cannot be read.
+    secret = tmp_path / "secret.txt"
+    secret.write_text("sk-ant-totally-secret", encoding="utf-8")
+
+    p = eval_dir / "eval.yaml"
+    p.write_text(
+        dedent(
+            """
+            config: {executor: mock}
+            tasks:
+              - id: t1
+                prompt: "{{leak}}"
+                fixtures: {leak: ../secret.txt}
+            graders:
+              - type: regex
+                name: r
+                config: {pattern: ".*", mode: match}
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigValidationError) as exc:
+        ConfigLoader().load(p)
+    assert "escape" in str(exc.value).lower()

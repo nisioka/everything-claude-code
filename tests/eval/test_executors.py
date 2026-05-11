@@ -122,3 +122,20 @@ def test_mock_executor_json_serializes_dict() -> None:
         prompt="p", system_instructions="s", skill_markdown=None, expected={"k": "v"}
     )
     assert '"k"' in res.output and '"v"' in res.output
+
+
+def test_mock_executor_json_format_emits_json_for_lists(monkeypatch) -> None:
+    """EVAL_HARNESS_MOCK_FORMAT=json drives `list_match parse_mode=json_array` graders."""
+    monkeypatch.setenv("EVAL_HARNESS_MOCK_FORMAT", "json")
+    ex = MockExecutor(model="ignored")
+    res = ex.run(
+        prompt="p", system_instructions="s", skill_markdown=None, expected=["a", "b"]
+    )
+    import json as _json
+    assert _json.loads(res.output) == ["a", "b"]
+
+
+def test_mock_executor_rejects_invalid_format(monkeypatch) -> None:
+    monkeypatch.setenv("EVAL_HARNESS_MOCK_FORMAT", "xml")
+    with pytest.raises(ValueError):
+        MockExecutor(model="ignored")

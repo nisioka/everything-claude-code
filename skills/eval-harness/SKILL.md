@@ -74,6 +74,8 @@ ANTHROPIC_API_KEY=sk-... uv run python -m scripts.eval \
 
 Exit codes: `0` all pass · `1` at least one task failed · `2` setup or execution error.
 
+If your suite uses a `list_match` grader with `parse_mode: json_array`, also set `EVAL_HARNESS_MOCK_FORMAT=json` so the mock executor JSON-encodes list-typed expecteds (default is one-item-per-line, which matches the more common `parse_mode: lines`).
+
 ### eval.yaml shape
 
 ```yaml

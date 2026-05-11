@@ -18,10 +18,16 @@ class UsageSnapshot(BaseModel):
 
     @property
     def cache_hit_ratio(self) -> float:
-        """Cache reads as a share of all input tokens that touched the cache layer.
+        """Cache-read share of cache-eligible tokens.
 
-        Defined as cache_read / (cache_read + cache_creation). When neither has tokens
-        (e.g. small SKILL.md below the model's cache minimum) the ratio is 0.0.
+        Formula: `cache_read / (cache_read + cache_creation)` — i.e. of the tokens
+        that did interact with the cache layer, what fraction was a hit (read) vs a
+        write (creation). `input_tokens` (uncached input) is intentionally excluded
+        from the denominator so the ratio measures cache effectiveness, not the
+        share of total input that was cached.
+
+        Returns 0.0 when neither counter has tokens — e.g. a small SKILL.md below
+        the model's minimum cache size.
         """
         denom = self.cache_read_input_tokens + self.cache_creation_input_tokens
         if denom == 0:

@@ -88,6 +88,27 @@ def test_judge_extracts_json_from_surrounding_prose() -> None:
     assert res.passed is True
 
 
+def test_judge_handles_trailing_brace_block_after_first_object() -> None:
+    """Regression for greedy `\\{.*\\}` parser: a chatty judge that emits a second
+    `{...}` block after the real one used to fail with `Extra data`."""
+    payload = (
+        '{"score": 0.9, "reason": "ok"} '
+        "and here is some debug info: {\"meta\": \"ignore-me\"}"
+    )
+    g, _ = _make_grader([_judge_response(payload)])
+    res = g.grade("anything", expected=None, context={})
+    assert res.score == pytest.approx(0.9)
+    assert res.passed is True
+
+
+def test_judge_skips_non_object_braces_before_real_json() -> None:
+    """Pre-amble that contains `{` but isn't a valid object should be skipped."""
+    payload = 'Note: avoid using {curly} braces.\n{"score": 0.7, "reason": "good"}'
+    g, _ = _make_grader([_judge_response(payload)])
+    res = g.grade("anything", expected=None, context={})
+    assert res.score == pytest.approx(0.7)
+
+
 def test_judge_passes_rubric_in_prompt() -> None:
     g, fake = _make_grader([_judge_response('{"score": 1, "reason": "ok"}')])
     g.grade("output", expected="expected", context={})

@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 from typing import Any
 
 from anthropic import Anthropic, APIStatusError, RateLimitError
@@ -143,17 +142,30 @@ class LlmJudgeGrader(Grader):
 
     @staticmethod
     def _parse_json(text: str) -> dict[str, Any]:
-        """Extract a JSON object from the response — tolerates code fences / prose wrap."""
-        # Try direct parse first.
+        """Extract the first JSON object from the response.
+
+        Tolerates code fences, leading/trailing prose, and trailing junk after the
+        object (e.g., a chatty judge that emits two `{...}` blocks). Uses
+        `JSONDecoder.raw_decode` rather than a greedy `\\{.*\\}` regex because the
+        latter spans multiple objects and falsely reports `Extra data`.
+        """
+        # Fast path: whole string is JSON.
         try:
             return json.loads(text.strip())
         except json.JSONDecodeError:
             pass
-        # Fall back: grab the first {...} block, ignoring code-fence markers.
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if not match:
-            raise ValueError("no JSON object found in judge response")
-        return json.loads(match.group(0))
+
+        decoder = json.JSONDecoder()
+        for i, ch in enumerate(text):
+            if ch != "{":
+                continue
+            try:
+                obj, _ = decoder.raw_decode(text[i:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+        raise ValueError("no JSON object found in judge response")
 
     def _error(self, msg: str) -> GraderResult:
         logger.error("LlmJudgeGrader '%s': %s", self.name, msg)

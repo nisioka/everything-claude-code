@@ -112,6 +112,13 @@ class ConfigLoader:
         if not isinstance(tasks, list):
             return
 
+        # Containment guard: resolved fixture paths must stay inside the eval.yaml's
+        # parent directory. Without this a contributor (or compromised PR) could
+        # exfiltrate /etc/hostname, ~/.ssh/*, or AWS creds via a fixture path like
+        # `../../etc/hostname` — those contents would be inlined into the prompt and
+        # sent to the Anthropic API at CI time.
+        base_resolved = base_dir.resolve()
+
         for task in tasks:
             if not isinstance(task, dict):
                 continue
@@ -122,6 +129,13 @@ class ConfigLoader:
 
             for name, rel_path in fixtures.items():
                 fixture_path = (base_dir / rel_path).resolve()
+                try:
+                    fixture_path.relative_to(base_resolved)
+                except ValueError as e:
+                    raise ConfigValidationError(
+                        f"fixture '{name}' escapes eval directory: {rel_path} "
+                        f"(resolved to {fixture_path}, must stay under {base_resolved})"
+                    ) from e
                 if not fixture_path.is_file():
                     raise ConfigValidationError(
                         f"fixture '{name}' references missing file: {rel_path} "

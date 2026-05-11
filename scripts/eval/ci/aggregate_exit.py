@@ -25,8 +25,11 @@ def main(argv: list[str]) -> int:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            print("2")
-            return 0
+            # Treat unreadable artifacts as the highest severity but keep scanning so
+            # the workflow log shows every problem file rather than only the first.
+            overall = max(overall, 2)
+            print(f"WARN: could not read {path}", file=sys.stderr)
+            continue
         s = payload["summary"]
         if s.get("error_count", 0) > 0:
             overall = max(overall, 2)

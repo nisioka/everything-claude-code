@@ -12,6 +12,11 @@ from scripts.eval.graders import Grader
 
 _VALID_MODES = {"match", "no_match"}
 
+# Allow-list of `re` flags that are sensible for output-matching graders.
+# Excludes things like `re.DEBUG` and `re.LOCALE` which would either spam stderr or
+# behave inconsistently across systems. Add to this set deliberately.
+_ALLOWED_FLAGS = {"IGNORECASE", "MULTILINE", "DOTALL", "VERBOSE", "ASCII", "UNICODE"}
+
 
 class RegexGrader(Grader):
     """Score 1.0 when the regex matches (mode=match) or doesn't (mode=no_match)."""
@@ -35,10 +40,12 @@ class RegexGrader(Grader):
             return 0
         bits: list[int] = []
         for spec in flag_specs:
-            attr = getattr(re, spec, None)
-            if not isinstance(attr, int) and not isinstance(attr, re.RegexFlag):
-                raise ValueError(f"unknown re flag: {spec}")
-            bits.append(int(attr))
+            if spec not in _ALLOWED_FLAGS:
+                raise ValueError(
+                    f"unknown or disallowed re flag: {spec!r} "
+                    f"(allowed: {sorted(_ALLOWED_FLAGS)})"
+                )
+            bits.append(int(getattr(re, spec)))
         return reduce(or_, bits, 0)
 
     def grade(self, output: str, expected: Any, context: dict[str, Any]) -> GraderResult:

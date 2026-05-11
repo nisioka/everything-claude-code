@@ -9,9 +9,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from scripts.eval.config import EvalConfig, GraderConfig, TaskConfig
+from scripts.eval.config import EvalConfig, TaskConfig
 from scripts.eval.executors import Executor, get_executor
-from scripts.eval.graders import GraderResult, aggregate, build_grader, summarise_status
+from scripts.eval.graders import Grader, GraderResult, aggregate, build_grader, summarise_status
 from scripts.eval.usage import UsageSnapshot
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class Orchestrator:
         executor: Executor,
         config: EvalConfig,
         skill_md: str | None,
-        graders,
+        graders: list[Grader],
     ) -> TaskResult:
         started = time.perf_counter()
         try:
