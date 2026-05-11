@@ -25,7 +25,7 @@ def _row(name: str, payload: dict) -> str:
         f"| {status} | `{name}` | {s['pass_count']}/{s['total_tasks']} | "
         f"{s['fail_count']} | {s['error_count']} | "
         f"{s['weighted_average']:.2f} | "
-        f"{s['total_input_tokens'] + s['total_cache_read_tokens'] + s['total_cache_creation_tokens']} | "
+        f"{s['total_input_tokens']} | "
         f"{s['total_output_tokens']} | {cache} | {s['elapsed_ms']} ms |"
     )
 

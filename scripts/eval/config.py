@@ -10,6 +10,7 @@ are safe to share across the orchestration pipeline.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Literal
 
@@ -127,6 +128,7 @@ class ConfigLoader:
             if not isinstance(fixtures, dict) or not isinstance(prompt, str):
                 continue
 
+            resolved: dict[str, str] = {}
             for name, rel_path in fixtures.items():
                 fixture_path = (base_dir / rel_path).resolve()
                 try:
@@ -142,11 +144,20 @@ class ConfigLoader:
                         f"(resolved to {fixture_path})"
                     )
                 try:
-                    content = fixture_path.read_text(encoding="utf-8")
+                    resolved[name] = fixture_path.read_text(encoding="utf-8")
                 except OSError as e:
                     raise ConfigValidationError(
                         f"failed to read fixture '{name}' at {fixture_path}: {e}"
                     ) from e
-                prompt = prompt.replace("{{" + name + "}}", content)
+
+            # Single-pass substitution prevents recursive replacement: if fixture A's
+            # content happens to contain `{{B}}`, sequential .replace() calls would
+            # expand it as if it were a real placeholder. re.sub walks the prompt once
+            # and only substitutes the original placeholders.
+            if resolved:
+                pattern = re.compile(
+                    r"\{\{(" + "|".join(re.escape(k) for k in resolved) + r")\}\}"
+                )
+                prompt = pattern.sub(lambda m: resolved[m.group(1)], prompt)
 
             task["prompt"] = prompt

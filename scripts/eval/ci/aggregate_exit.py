@@ -36,7 +36,7 @@ def main(argv: list[str]) -> int:
         elif s.get("fail_count", 0) > 0:
             overall = max(overall, 1)
     print(overall)
-    return 0
+    return overall
 
 
 if __name__ == "__main__":

@@ -118,7 +118,12 @@ class LlmJudgeGrader(Grader):
         return self._client
 
     def _build_prompt(self, output: str, expected: Any) -> str:
-        expected_repr = expected if isinstance(expected, str) else json.dumps(expected, ensure_ascii=False)
+        if expected is None:
+            expected_repr = ""
+        elif isinstance(expected, str):
+            expected_repr = expected
+        else:
+            expected_repr = json.dumps(expected, ensure_ascii=False)
         return (
             f"Rubric:\n{self.rubric}\n\n"
             f"Expected (may be empty):\n{expected_repr}\n\n"

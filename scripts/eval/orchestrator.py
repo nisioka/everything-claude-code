@@ -176,7 +176,7 @@ class Orchestrator:
         )
 
         usages = [t.usage for t in task_results if t.usage is not None]
-        in_tok = sum(u.input_tokens for u in usages)
+        in_tok = sum(u.total_input_tokens for u in usages)
         out_tok = sum(u.output_tokens for u in usages)
         c_read = sum(u.cache_read_input_tokens for u in usages)
         c_create = sum(u.cache_creation_input_tokens for u in usages)

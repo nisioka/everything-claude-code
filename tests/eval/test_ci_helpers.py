@@ -83,7 +83,7 @@ def test_aggregate_exit_with_fail(tmp_path: Path, capsys) -> None:
     _write(tmp_path, "a.json", _result(3, 0, 0))
     _write(tmp_path, "b.json", _result(2, 1, 0))
     rc = aggregate_exit.main(["aggregate_exit.py", str(tmp_path)])
-    assert rc == 0
+    assert rc == 1
     assert capsys.readouterr().out.strip() == "1"
 
 
@@ -91,14 +91,14 @@ def test_aggregate_exit_error_takes_precedence(tmp_path: Path, capsys) -> None:
     _write(tmp_path, "a.json", _result(2, 1, 0))
     _write(tmp_path, "b.json", _result(2, 0, 1))
     rc = aggregate_exit.main(["aggregate_exit.py", str(tmp_path)])
-    assert rc == 0
+    assert rc == 2
     assert capsys.readouterr().out.strip() == "2"
 
 
 def test_aggregate_exit_corrupt_returns_2(tmp_path: Path, capsys) -> None:
     (tmp_path / "broken.json").write_text("not json", encoding="utf-8")
     rc = aggregate_exit.main(["aggregate_exit.py", str(tmp_path)])
-    assert rc == 0
+    assert rc == 2
     assert capsys.readouterr().out.strip() == "2"
 
 

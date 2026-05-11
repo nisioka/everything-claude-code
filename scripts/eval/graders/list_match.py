@@ -17,7 +17,7 @@ class ListMatchGrader(Grader):
 
     def __init__(self, name: str, config: dict[str, Any]) -> None:
         self.name = name
-        self.expected_items = list(config.get("expected_items", []))
+        self.expected_items = [str(x) for x in config.get("expected_items", [])]
         self.mode = config.get("mode", "exact")
         self.parse_mode = config.get("parse_mode", "lines")
         # When True, the per-task `expected` field (a list) overrides config.expected_items.
