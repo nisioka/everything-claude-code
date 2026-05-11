@@ -94,4 +94,5 @@ def summarise_status(
 
 # Side-effect imports: each grader module registers itself on import.
 from scripts.eval.graders import list_match as _list_match  # noqa: E402, F401
+from scripts.eval.graders import llm_judge as _llm_judge  # noqa: E402, F401
 from scripts.eval.graders import regex as _regex  # noqa: E402, F401
