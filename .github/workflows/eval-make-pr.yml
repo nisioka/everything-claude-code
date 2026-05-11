@@ -1,0 +1,133 @@
+name: eval-make-pr
+
+# PR トリガで evals/make-pr-*/eval.yaml を評価し、結果を PR コメントとアーティファクトに残す。
+# evals/ または scripts/eval/ が変更されない PR ではジョブをスキップする (Req 6.6)。
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "evals/**"
+      - "scripts/eval/**"
+      - "skills/make-pr/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/eval-make-pr.yml"
+
+# Same-PR runs cancel each other so only the latest commit's eval is published.
+concurrency:
+  group: eval-make-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  run-eval:
+    name: ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    # Skip the entire job (rather than failing) if no API key is configured — the harness
+    # is opt-in and we don't want PRs from forks to break when secrets aren't available.
+    if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    strategy:
+      # Don't let one failing suite cancel its peers — we want to publish all results.
+      fail-fast: false
+      matrix:
+        suite:
+          - make-pr-commit-message
+          - make-pr-ticket-extract
+          - make-pr-sensitive-file
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv (with cache)
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (frozen)
+        run: uv sync --frozen
+
+      - name: Run eval suite
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p .eval-results
+          set +e
+          uv run python -m scripts.eval \
+            evals/${{ matrix.suite }}/eval.yaml \
+            --output .eval-results/${{ matrix.suite }}.json
+          echo "$?" > .eval-results/${{ matrix.suite }}.exit
+          set -e
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-result-${{ matrix.suite }}
+          path: .eval-results/
+
+  comment-and-status:
+    name: Aggregate & comment on PR
+    runs-on: ubuntu-latest
+    needs: run-eval
+    if: ${{ always() && secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all eval results
+        uses: actions/download-artifact@v4
+        with:
+          path: .eval-results
+          pattern: eval-result-*
+          merge-multiple: true
+
+      - name: Setup uv (cached install for the comment script)
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install deps for comment script
+        run: uv sync --frozen
+
+      - name: Build PR comment markdown
+        id: build_comment
+        run: |
+          uv run python scripts/eval/ci/build_comment.py \
+            .eval-results \
+            > pr-comment.md
+          echo "exit_code=$(uv run python scripts/eval/ci/aggregate_exit.py .eval-results)" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Post / update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('pr-comment.md', 'utf8');
+            const marker = '<!-- eval-make-pr-comment -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body,
+              });
+            }
+
+      - name: Fail workflow when any suite reported fail/error
+        if: ${{ steps.build_comment.outputs.exit_code != '0' }}
+        run: |
+          echo "::error::At least one eval suite reported fail or error (aggregated exit ${{ steps.build_comment.outputs.exit_code }})"
+          exit 1
