@@ -59,4 +59,5 @@ def get_executor(name: str, model: str) -> Executor:
 
 
 # Side-effect imports: each executor module registers itself on import.
+from scripts.eval.executors import anthropic as _anthropic  # noqa: E402, F401
 from scripts.eval.executors import mock as _mock  # noqa: E402, F401
