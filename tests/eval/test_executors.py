@@ -107,10 +107,18 @@ def test_mock_executor_handles_missing_expected() -> None:
     assert res.usage is None
 
 
-def test_mock_executor_serializes_non_string_expected() -> None:
+def test_mock_executor_joins_list_with_newlines() -> None:
+    """Lists are emitted one-per-line so list_match parse_mode='lines' works on mock."""
     ex = MockExecutor(model="ignored")
     res = ex.run(
         prompt="p", system_instructions="s", skill_markdown=None, expected=["a", "b"]
     )
-    # Lists / dicts are JSON-serialized so list_match grader can parse them.
-    assert "a" in res.output and "b" in res.output
+    assert res.output == "a\nb"
+
+
+def test_mock_executor_json_serializes_dict() -> None:
+    ex = MockExecutor(model="ignored")
+    res = ex.run(
+        prompt="p", system_instructions="s", skill_markdown=None, expected={"k": "v"}
+    )
+    assert '"k"' in res.output and '"v"' in res.output

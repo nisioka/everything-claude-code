@@ -132,7 +132,11 @@ class Orchestrator:
                     grader.grade(
                         execution.output,
                         task.expected,
-                        {"task_id": task.id, "model": config.config.model},
+                        {
+                            "task_id": task.id,
+                            "model": config.config.model,
+                            "executor": config.config.executor,
+                        },
                     )
                 )
             except Exception as e:  # noqa: BLE001 — surface as GRADER_ERROR

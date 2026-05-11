@@ -1,0 +1,8 @@
+src/api/main.py
+src/api/auth.py
+README.md
+package.json
+src/components/Login.tsx
+docs/setup.md
+tests/api/test_main.py
+.gitignore

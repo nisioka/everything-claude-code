@@ -20,6 +20,9 @@ class ListMatchGrader(Grader):
         self.expected_items = list(config.get("expected_items", []))
         self.mode = config.get("mode", "exact")
         self.parse_mode = config.get("parse_mode", "lines")
+        # When True, the per-task `expected` field (a list) overrides config.expected_items.
+        # Use this when one eval.yaml mixes positive (must-detect) and negative (clean) tasks.
+        self.use_task_expected = bool(config.get("use_task_expected", False))
 
         if self.mode not in _VALID_MODES:
             raise ValueError(
@@ -43,8 +46,23 @@ class ListMatchGrader(Grader):
                 reason=f"GRADER_ERROR: failed to parse output as {self.parse_mode}: {e}",
             )
 
+        if self.use_task_expected:
+            if not isinstance(expected, list):
+                return GraderResult(
+                    grader_name=self.name,
+                    score=0.0,
+                    passed=False,
+                    reason=(
+                        f"GRADER_ERROR: use_task_expected=True but task.expected is "
+                        f"{type(expected).__name__}, not list"
+                    ),
+                )
+            expected_items = [str(x) for x in expected]
+        else:
+            expected_items = self.expected_items
+
         actual_set = set(actual)
-        expected_set = set(self.expected_items)
+        expected_set = set(expected_items)
 
         if self.mode == "exact":
             passed = actual_set == expected_set

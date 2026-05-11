@@ -211,6 +211,36 @@ def test_list_match_rejects_unknown_mode() -> None:
         ListMatchGrader(name="l", config={"expected_items": [], "mode": "fuzzy"})
 
 
+def test_list_match_use_task_expected_overrides_config() -> None:
+    """When use_task_expected=True, per-task expected (a list) is the source of truth."""
+    g = ListMatchGrader(
+        name="l",
+        config={"expected_items": ["should_be_ignored"], "mode": "exact", "use_task_expected": True},
+    )
+    res = g.grade(output=".env\ncreds.json", expected=[".env", "creds.json"], context={})
+    assert res.passed is True
+
+
+def test_list_match_use_task_expected_clean_case() -> None:
+    """Empty expected list + empty output → pass (sensitive-file clean scenario)."""
+    g = ListMatchGrader(
+        name="l",
+        config={"mode": "exact", "use_task_expected": True},
+    )
+    res = g.grade(output="", expected=[], context={})
+    assert res.passed is True
+
+
+def test_list_match_use_task_expected_requires_list_expected() -> None:
+    g = ListMatchGrader(
+        name="l",
+        config={"mode": "exact", "use_task_expected": True},
+    )
+    res = g.grade(output="anything", expected="not-a-list", context={})
+    assert res.passed is False
+    assert "GRADER_ERROR" in res.reason
+
+
 # ---- Aggregation -----------------------------------------------------------
 
 

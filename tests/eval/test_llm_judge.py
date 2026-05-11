@@ -156,18 +156,31 @@ def test_llm_judge_self_registers() -> None:
 
 
 def test_orchestrator_marks_task_error_on_judge_failure(tmp_path, monkeypatch) -> None:
-    """E2E-ish: a failing judge should make the orchestrator status 'error'."""
+    """E2E-ish: a failing judge under a non-mock executor must produce status 'error'."""
     monkeypatch.setattr("scripts.eval.retry.time.sleep", lambda *_: None)
     from textwrap import dedent
 
     from scripts.eval.config import ConfigLoader
+    from scripts.eval.executors import ExecutionResult, Executor
     from scripts.eval.orchestrator import Orchestrator
+
+    class _Echo(Executor):
+        def __init__(self, model: str) -> None:
+            self.model = model
+
+        def run(self, prompt, system_instructions, skill_markdown, *, expected=None):
+            return ExecutionResult(output=str(expected or ""))
+
+    monkeypatch.setattr(
+        "scripts.eval.orchestrator.get_executor",
+        lambda name, model: _Echo(model=model),
+    )
 
     p = tmp_path / "eval.yaml"
     p.write_text(
         dedent(
             """
-            config: {executor: mock}
+            config: {executor: anthropic}
             tasks:
               - id: t1
                 prompt: p
