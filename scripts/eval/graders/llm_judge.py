@@ -1,26 +1,23 @@
-"""LlmJudgeGrader — Anthropic-backed rubric judge with structured JSON output (Reqs 3.4, 3.7).
+"""LlmJudgeGrader — rubric-based judge via `claude -p --output-format json`.
 
-Failure modes are folded into a single `JUDGE_ERROR: ...` GraderResult so the
-Orchestrator's existing `summarise_status` rule promotes the task to `error` without
-needing to know about LLM-specific failures.
+Failure modes (CLI error, malformed JSON, score out of range, empty reason) are
+folded into a single `JUDGE_ERROR: ...` GraderResult so the Orchestrator promotes
+the task to `error` without needing to know about judge-specific failures.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
-from typing import Any
+from typing import Any, Callable
 
-from anthropic import Anthropic, APIStatusError, RateLimitError
-
+from scripts.eval.claude_cli_runner import DEFAULT_TIMEOUT_SEC, run_claude_cli
+from scripts.eval.errors import ClaudeCliError
 from scripts.eval.graders import Grader, GraderResult, register_grader
-from scripts.eval.retry import RetryHandler
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
-DEFAULT_MAX_TOKENS = 1024
 
 _JUDGE_SYSTEM = (
     "You are an evaluation judge. Read the rubric, the model output, and the expected "
@@ -35,23 +32,19 @@ class LlmJudgeGrader(Grader):
         self,
         name: str,
         config: dict[str, Any],
-        client: Any | None = None,
-        retry_handler: RetryHandler | None = None,
+        runner: Callable[..., Any] | None = None,
     ) -> None:
         self.name = name
         self.rubric = config.get("rubric", "")
         self.judge_model = config.get("judge_model", DEFAULT_JUDGE_MODEL)
-        self.max_tokens = config.get("max_tokens", DEFAULT_MAX_TOKENS)
         self.threshold = float(config.get("pass_threshold", 0.5))
-
-        # Lazy client: judge is independent of the main executor (different model OK).
-        # Don't error on missing API key here — surface as JUDGE_ERROR at grade time so a
-        # mock-only run doesn't crash if a YAML file happens to declare a judge grader.
-        self._client = client
-        self.retry = retry_handler or RetryHandler()
+        self.timeout_sec = int(config.get("timeout_sec", DEFAULT_TIMEOUT_SEC))
+        # `runner` is the subprocess.run injection point used by run_claude_cli.
+        # Production callers leave it None.
+        self._runner = runner
 
     def grade(self, output: str, expected: Any, context: dict[str, Any]) -> GraderResult:
-        # Skip the actual judge call under the mock executor: the run is exercising
+        # Skip the actual judge call under the mock executor: the run exercises
         # runner mechanics, not model quality. A clear "skipped" reason makes this
         # visible in reports without polluting the pass count.
         if context.get("executor") == "mock":
@@ -62,41 +55,32 @@ class LlmJudgeGrader(Grader):
                 reason="MOCK_JUDGE_SKIPPED: executor=mock, judge call bypassed",
             )
 
-        try:
-            client = self._get_client()
-        except Exception as e:
-            return self._error(f"client unavailable: {e}")
-
         prompt = self._build_prompt(output, expected)
-
         try:
-            response = self.retry.call(
-                lambda: client.messages.create(
-                    model=self.judge_model,
-                    max_tokens=self.max_tokens,
-                    system=_JUDGE_SYSTEM,
-                    messages=[{"role": "user", "content": prompt}],
-                )
+            cli_result = run_claude_cli(
+                prompt=prompt,
+                system_prompt=_JUDGE_SYSTEM,
+                model=self.judge_model,
+                timeout_sec=self.timeout_sec,
+                runner=self._runner,
             )
-        except (APIStatusError, RateLimitError) as e:
-            return self._error(f"judge API failed: {e}")
-        except Exception as e:  # noqa: BLE001 — surface anything from the network call
-            return self._error(f"judge call raised: {e}")
+        except ClaudeCliError as e:
+            return self._error(f"judge CLI call failed: {e}")
 
-        text = self._extract_text(response)
+        raw = cli_result.text
         try:
-            data = self._parse_json(text)
+            data = self._parse_json(raw)
         except (ValueError, json.JSONDecodeError) as e:
-            return self._error(f"could not parse judge response as JSON: {e}; raw={text[:200]!r}")
+            return self._error(f"could not parse judge response as JSON: {e}; raw={raw[:200]!r}")
 
         try:
             score = float(data["score"])
             reason = data["reason"]
         except (KeyError, TypeError, ValueError) as e:
-            return self._error(f"judge JSON missing required keys: {e}; raw={text[:200]!r}")
+            return self._error(f"judge JSON missing required keys: {e}; raw={raw[:200]!r}")
 
         if not isinstance(reason, str) or not reason.strip():
-            return self._error(f"judge JSON `reason` is empty or non-string; raw={text[:200]!r}")
+            return self._error(f"judge JSON `reason` is empty or non-string; raw={raw[:200]!r}")
         if not 0.0 <= score <= 1.0:
             return self._error(f"judge JSON `score` out of range (0..1): {score}")
 
@@ -108,14 +92,6 @@ class LlmJudgeGrader(Grader):
         )
 
     # ---- helpers ---------------------------------------------------------
-
-    def _get_client(self) -> Any:
-        if self._client is not None:
-            return self._client
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise RuntimeError("ANTHROPIC_API_KEY not set")
-        self._client = Anthropic()
-        return self._client
 
     def _build_prompt(self, output: str, expected: Any) -> str:
         if expected is None:
@@ -132,29 +108,13 @@ class LlmJudgeGrader(Grader):
         )
 
     @staticmethod
-    def _extract_text(response: Any) -> str:
-        parts: list[str] = []
-        for block in getattr(response, "content", []) or []:
-            block_type = getattr(block, "type", None) or (
-                block.get("type") if isinstance(block, dict) else None
-            )
-            if block_type != "text":
-                continue
-            text = getattr(block, "text", None) if not isinstance(block, dict) else block.get("text")
-            if text:
-                parts.append(text)
-        return "".join(parts)
-
-    @staticmethod
     def _parse_json(text: str) -> dict[str, Any]:
         """Extract the first JSON object from the response.
 
         Tolerates code fences, leading/trailing prose, and trailing junk after the
-        object (e.g., a chatty judge that emits two `{...}` blocks). Uses
-        `JSONDecoder.raw_decode` rather than a greedy `\\{.*\\}` regex because the
-        latter spans multiple objects and falsely reports `Extra data`.
+        object. Uses `JSONDecoder.raw_decode` rather than a greedy `\\{.*\\}` regex
+        because the latter spans multiple objects and falsely reports `Extra data`.
         """
-        # Fast path: whole string is JSON.
         try:
             return json.loads(text.strip())
         except json.JSONDecodeError:

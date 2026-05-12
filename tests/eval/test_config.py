@@ -42,7 +42,7 @@ def test_grader_config_rejects_unknown_type() -> None:
 def test_models_are_frozen() -> None:
     cfg = RunnerConfig()
     with pytest.raises(Exception):
-        cfg.executor = "anthropic"  # type: ignore[misc]
+        cfg.executor = "claude_cli"  # type: ignore[misc]
 
 
 def test_task_config_minimal() -> None:

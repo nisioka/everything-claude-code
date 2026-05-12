@@ -87,13 +87,13 @@ def test_cli_writes_output_json(tmp_path: Path) -> None:
 
 
 def test_cli_executor_override(tmp_path: Path) -> None:
-    """Override anthropic→mock so we don't need an API key for the test."""
-    p = tmp_path / "anthropic.yaml"
+    """Override claude_cli→mock so the test never spawns a subprocess."""
+    p = tmp_path / "claude_cli.yaml"
     p.write_text(
         dedent(
             """
             config:
-              executor: anthropic
+              executor: claude_cli
               model: claude-sonnet-4-6
             tasks:
               - id: t1

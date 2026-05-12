@@ -19,5 +19,5 @@ class UnknownGraderError(EvalHarnessError):
     """Raised when a requested grader type is not registered."""
 
 
-class MissingApiKeyError(EvalHarnessError):
-    """Raised when the Anthropic executor is selected without ANTHROPIC_API_KEY."""
+class ClaudeCliError(EvalHarnessError):
+    """Raised when `claude -p` exits non-zero, times out, or reports is_error=true."""

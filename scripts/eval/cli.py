@@ -32,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("eval_yaml", nargs="?", help="Path to the eval.yaml file")
     parser.add_argument(
         "--executor",
-        choices=["mock", "anthropic"],
+        choices=["mock", "claude_cli"],
         default=None,
         help="Override config.executor in the YAML",
     )

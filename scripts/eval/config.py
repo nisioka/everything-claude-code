@@ -45,7 +45,7 @@ class TaskConfig(BaseModel):
 class RunnerConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    executor: Literal["mock", "anthropic"] = "mock"
+    executor: Literal["mock", "claude_cli"] = "mock"
     model: str = "claude-sonnet-4-6"
     skill_path: Path | None = None
     instructions: str = ""
@@ -117,7 +117,7 @@ class ConfigLoader:
         # parent directory. Without this a contributor (or compromised PR) could
         # exfiltrate /etc/hostname, ~/.ssh/*, or AWS creds via a fixture path like
         # `../../etc/hostname` — those contents would be inlined into the prompt and
-        # sent to the Anthropic API at CI time.
+        # sent through the model at eval time.
         base_resolved = base_dir.resolve()
 
         for task in tasks:

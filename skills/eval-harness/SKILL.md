@@ -23,7 +23,7 @@ If you're adding a one-off capability check while building a skill, use the mark
 
 ## Waza-compatible YAML Harness (auto-runnable)
 
-A Python implementation of the [Microsoft Waza](https://github.com/microsoft/waza) YAML schema lives in `scripts/eval/`. It calls Claude via the Anthropic SDK directly (no Go required), supports prompt caching, and is wired into a GitHub Actions workflow that comments results on PRs.
+A Python implementation of the [Microsoft Waza](https://github.com/microsoft/waza) YAML schema lives in `scripts/eval/`. It invokes Claude via the **Claude Code CLI** (`claude -p --output-format json`) as a subprocess, so authentication is delegated to the CLI: `claude login` (Max/Pro subscription), `ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN` all work without the harness reading them directly. Prompt caching is automatic across CLI invocations within the cache TTL.
 
 ### Layout
 
@@ -65,8 +65,8 @@ uv sync --frozen
 # Smoke-test a suite without spending tokens (mock executor echoes expected)
 uv run python -m scripts.eval evals/make-pr-commit-message/eval.yaml --executor mock
 
-# Run for real against Anthropic API (requires ANTHROPIC_API_KEY)
-ANTHROPIC_API_KEY=sk-... uv run python -m scripts.eval \
+# Run for real via the Claude Code CLI (needs `claude` on PATH; `claude login` once)
+uv run python -m scripts.eval \
   evals/make-pr-commit-message/eval.yaml \
   --output results.json \
   --verbose
@@ -80,7 +80,7 @@ If your suite uses a `list_match` grader with `parse_mode: json_array`, also set
 
 ```yaml
 config:
-  executor: anthropic        # or "mock"
+  executor: claude_cli       # or "mock"
   model: claude-sonnet-4-6
   skill_path: skills/make-pr/SKILL.md  # auto-cached as a system block
   instructions: |
@@ -128,7 +128,7 @@ The markdown EDD concepts translate to YAML like this:
 
 ### CI integration
 
-`.github/workflows/eval-make-pr.yml` runs each `evals/make-pr-*/eval.yaml` in a matrix on `pull_request` events, posts a single PR comment that updates in place across pushes, and fails the workflow when any suite reports `fail` or `error`. The job is skipped when `ANTHROPIC_API_KEY` is not configured (e.g., on fork PRs), and `paths` filters mean unrelated PRs don't pay the API cost.
+CI integration was removed when the harness moved to the Claude Code CLI executor, because Max/Pro subscription credentials don't transfer to GitHub Actions cleanly. The harness is now **local-only**: contributors run `uv run python -m scripts.eval ...` before opening a PR. If you need PR-time gating again, the supported re-introductions are (a) `claude setup-token` to generate a `CLAUDE_CODE_OAUTH_TOKEN` Actions secret, or (b) revert to API-key billing via `ANTHROPIC_API_KEY`. See `evals/README.md` §4 for operational details.
 
 ### When to add a YAML eval
 

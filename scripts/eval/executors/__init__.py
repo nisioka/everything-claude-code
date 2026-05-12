@@ -1,7 +1,8 @@
 """Executor plugin boundary: ABC, ExecutionResult, and a string-ID registry.
 
-The MockExecutor is auto-imported below so it self-registers with the runtime
-registry. AnthropicExecutor is added in task 6 the same way.
+`mock` and `claude_cli` are auto-imported below so they self-register with the
+runtime registry. New executors should follow the same `register_executor(...)`
+side-effect import pattern.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ class Executor(ABC):
     Implementations receive the rendered prompt + a (possibly empty) system instruction
     string + an optional SKILL.md body and return an ExecutionResult. The `expected`
     keyword exists so the MockExecutor can echo a task's expected value without coupling
-    the orchestrator to the executor implementation; real executors (Anthropic) ignore it.
+    the orchestrator to the executor implementation; the CLI executor ignores it.
     """
 
     @abstractmethod
@@ -69,5 +70,5 @@ def get_executor(name: str, model: str) -> Executor:
 
 
 # Side-effect imports: each executor module registers itself on import.
-from scripts.eval.executors import anthropic as _anthropic  # noqa: E402, F401
+from scripts.eval.executors import claude_cli as _claude_cli  # noqa: E402, F401
 from scripts.eval.executors import mock as _mock  # noqa: E402, F401

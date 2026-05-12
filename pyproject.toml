@@ -6,7 +6,6 @@ requires-python = ">=3.11"
 # uv.lock is committed to this repository so that local + CI installs resolve to
 # the exact same versions. Run `uv sync --frozen` in CI and `uv sync` locally.
 dependencies = [
-    "anthropic>=0.100.0",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
 ]
