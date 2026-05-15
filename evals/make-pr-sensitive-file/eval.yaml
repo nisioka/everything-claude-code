@@ -1,0 +1,68 @@
+config:
+  executor: claude_cli
+  model: claude-sonnet-4-6
+  skill_path: skills/make-pr/SKILL.md
+  instructions: |
+    You are following the make-pr skill (Phase 1.2: Sensitive File Detection).
+    Read the file list below and output the names (one per line) of files that
+    look sensitive — credentials, secrets, environment files, private keys.
+    Examples of sensitive: `.env`, `.env.production`, `credentials.json`,
+    `*.pem`, `*.key`, `secrets.json`. If no sensitive files are present output
+    nothing (empty output).
+
+    Output ONLY the bare file names from the list, one per line. No prose, no
+    bullets, no code fences.
+
+tasks:
+  - id: detect-multiple-secrets
+    prompt: |
+      File list:
+      {{files}}
+    fixtures:
+      files: fixtures/files-with-secrets.txt
+    # use_task_expected=true ⇒ this list IS the grader's expected_items for this task
+    expected:
+      - .env
+      - credentials.json
+      - deploy/private_key.pem
+      - .env.production
+
+  - id: detect-pem-only
+    prompt: |
+      File list:
+      {{files}}
+    fixtures:
+      files: fixtures/files-with-pem-only.txt
+    expected:
+      - deploy/private_key.pem
+
+  - id: clean-list-no-detection
+    prompt: |
+      File list:
+      {{files}}
+    fixtures:
+      files: fixtures/files-clean.txt
+    expected: []
+
+graders:
+  # Per-task expected list. mode=superset ensures we accept extra detections
+  # but require all the expected sensitive files to appear in the output.
+  - type: list_match
+    name: required_secrets_detected
+    weight: 2.0
+    config:
+      mode: superset
+      parse_mode: lines
+      use_task_expected: true
+
+  # For the clean-list-no-detection task this enforces that the model output is
+  # the empty string (no spurious detections). For positive tasks, the bracketed
+  # exact mode is too strict, so we run this with a higher weight on a separate
+  # eval would be ideal — for now the superset above is the primary signal.
+  - type: regex
+    name: no_unrelated_explanatory_text
+    weight: 0.5
+    config:
+      pattern: '\b(here are|i found|the following)\b'
+      mode: no_match
+      flags: ["IGNORECASE"]

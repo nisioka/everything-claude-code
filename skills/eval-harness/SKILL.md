@@ -10,6 +10,135 @@ Eval-Driven Development treats evals as the "unit tests of AI development":
 - Track regressions with each change
 - Use pass@k metrics for reliability measurement
 
+## Two complementary harnesses in this repo
+
+This skill describes **two ways** to run evals against Claude Code skills. Pick the one that matches your need:
+
+| Use case | Format | Where it lives | Runner |
+| --- | --- | --- | --- |
+| Lightweight, in-session checks (review-time, ad-hoc) | Markdown blocks (this document) | `.claude/evals/*.md` | Human / in-session Claude |
+| Automated, regressable evals run on every PR | Waza-compatible YAML | `evals/<skill>/eval.yaml` + fixtures | `uv run python -m scripts.eval` |
+
+If you're adding a one-off capability check while building a skill, use the markdown patterns lower in this document. If you want CI to fail on regressions and produce token / cache cost reports, use the YAML harness described below.
+
+## Waza-compatible YAML Harness (auto-runnable)
+
+A Python implementation of the [Microsoft Waza](https://github.com/microsoft/waza) YAML schema lives in `scripts/eval/`. It invokes Claude via the **Claude Code CLI** (`claude -p --output-format json`) as a subprocess, so authentication is delegated to the CLI: `claude login` (Max/Pro subscription), `ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN` all work without the harness reading them directly. Prompt caching is automatic across CLI invocations within the cache TTL.
+
+### Layout
+
+```
+evals/
+  make-pr-commit-message/
+    eval.yaml
+    fixtures/
+      diff-feat-rate-limit.txt
+      diff-fix-typo.txt
+      diff-docs-readme.txt
+  make-pr-ticket-extract/
+    eval.yaml
+  make-pr-sensitive-file/
+    eval.yaml
+    fixtures/
+      files-with-secrets.txt
+      files-clean.txt
+scripts/eval/
+  cli.py              # `python -m scripts.eval`
+  config.py           # YAML → Pydantic schema
+  orchestrator.py     # task-by-task execution + grading
+  reporter.py         # stdout summary + JSON output
+  executors/
+    mock.py           # offline runner mechanics check
+    anthropic.py      # real Claude API + prompt caching
+  graders/
+    regex.py          # match / no_match
+    list_match.py     # exact / superset / subset
+    llm_judge.py      # rubric-based judge with structured output
+```
+
+### Minimal commands
+
+```bash
+# Install once (pinned by uv.lock; no system Python pollution)
+uv sync --frozen
+
+# Smoke-test a suite without spending tokens (mock executor echoes expected)
+uv run python -m scripts.eval evals/make-pr-commit-message/eval.yaml --executor mock
+
+# Run for real via the Claude Code CLI (needs `claude` on PATH; `claude login` once)
+uv run python -m scripts.eval \
+  evals/make-pr-commit-message/eval.yaml \
+  --output results.json \
+  --verbose
+```
+
+Exit codes: `0` all pass · `1` at least one task failed · `2` setup or execution error.
+
+If your suite uses a `list_match` grader with `parse_mode: json_array`, also set `EVAL_HARNESS_MOCK_FORMAT=json` so the mock executor JSON-encodes list-typed expecteds (default is one-item-per-line, which matches the more common `parse_mode: lines`).
+
+### eval.yaml shape
+
+```yaml
+config:
+  executor: claude_cli       # or "mock"
+  model: claude-sonnet-4-6
+  skill_path: skills/make-pr/SKILL.md  # auto-cached as a system block
+  instructions: |
+    Fixed system prompt for the eval (also cached).
+
+tasks:
+  - id: t1
+    prompt: "...{{fixture_name}}..."   # {{name}} is replaced with fixture content
+    fixtures:
+      fixture_name: fixtures/some-input.txt
+    expected: "feat: add x"
+
+graders:
+  - type: regex            # 1.0 if pattern matches, else 0.0
+    name: conv_type
+    weight: 2.0
+    config:
+      pattern: '^(feat|fix|docs)(\([^)]+\))?:\s'
+      mode: match          # or "no_match" for negative assertions
+  - type: list_match       # set comparison after parsing output
+    name: items
+    config:
+      mode: superset       # or "exact" / "subset"
+      use_task_expected: true   # use per-task `expected` (a list) as the items
+  - type: llm_judge        # rubric-based scoring via a separate Claude call
+    name: subject_quality
+    config:
+      judge_model: claude-sonnet-4-6
+      rubric: |
+        Score 1.0 when subject is concise (<72 chars), imperative mood, ...
+```
+
+### Capability / Regression Eval ↔ YAML mapping
+
+The markdown EDD concepts translate to YAML like this:
+
+| Markdown concept | YAML mechanism |
+| --- | --- |
+| **Capability Eval** ("can Claude do X?") | A task with `expected` set + a `regex` / `list_match` / `llm_judge` grader checking the success criterion |
+| **Regression Eval** ("does it still work?") | The same eval.yaml committed in the repo; CI re-runs it on every PR and a score drop is flagged in the PR comment |
+| **Code-Based Grader** | `regex` or `list_match` (deterministic, no API cost) |
+| **Model-Based Grader** | `llm_judge` (separate judge model + rubric, returns score + reason) |
+| **Human Grader** | Stays in markdown — YAML harness does not gate on humans |
+| **pass@k metrics** | Run the suite k times and aggregate; the harness emits weighted_score per task and pass/fail/error counts per run |
+
+### CI integration
+
+CI integration was removed when the harness moved to the Claude Code CLI executor, because Max/Pro subscription credentials don't transfer to GitHub Actions cleanly. The harness is now **local-only**: contributors run `uv run python -m scripts.eval ...` before opening a PR. If you need PR-time gating again, the supported re-introductions are (a) `claude setup-token` to generate a `CLAUDE_CODE_OAUTH_TOKEN` Actions secret, or (b) revert to API-key billing via `ANTHROPIC_API_KEY`. See `evals/README.md` §4 for operational details.
+
+### When to add a YAML eval
+
+Add a YAML suite when **all** of these hold:
+- The skill has 2+ shippable phases that can be evaluated in isolation (no full git/PR/file-system dance)
+- You have stable fixtures (diffs, file lists, branch names) that won't drift
+- You're willing to spend ~$0.10 / PR for the regression signal
+
+Stick with markdown evals when you're sketching a skill or doing one-off capability checks.
+
 ## Eval Types
 
 ### Capability Evals

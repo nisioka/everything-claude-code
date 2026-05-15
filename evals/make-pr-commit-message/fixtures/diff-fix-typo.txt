@@ -1,0 +1,10 @@
+diff --git a/README.md b/README.md
+index 1a2b3c4..5d6e7f8 100644
+--- a/README.md
++++ b/README.md
+@@ -12,7 +12,7 @@ Then run:
+ ```bash
+ npm install
+-npm run dev   # starts the developement server
++npm run dev   # starts the development server
+ ```

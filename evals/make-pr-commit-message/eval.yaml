@@ -1,0 +1,59 @@
+config:
+  executor: claude_cli
+  model: claude-sonnet-4-6
+  skill_path: skills/make-pr/SKILL.md
+  instructions: |
+    You are following the make-pr skill (Phase 2.1: Commit Message Generation).
+    Read the git diff below and generate ONE Conventional Commits message in the
+    form `type(scope?): subject`. Output only the commit message body — no prose,
+    no code fences, no explanation.
+
+tasks:
+  - id: feat-rate-limit
+    prompt: |
+      Generate a commit message for the following diff:
+
+      {{diff}}
+    fixtures:
+      diff: fixtures/diff-feat-rate-limit.txt
+    expected: "feat(api): add per-user rate limiting middleware"
+
+  - id: fix-typo
+    prompt: |
+      Generate a commit message for the following diff:
+
+      {{diff}}
+    fixtures:
+      diff: fixtures/diff-fix-typo.txt
+    expected: "fix(docs): correct 'developement' typo in README"
+
+  - id: docs-architecture
+    prompt: |
+      Generate a commit message for the following diff:
+
+      {{diff}}
+    fixtures:
+      diff: fixtures/diff-docs-readme.txt
+    expected: "docs: add architecture overview document"
+
+graders:
+  - type: regex
+    name: conventional_commits_syntax
+    weight: 2.0
+    config:
+      pattern: '^(feat|fix|docs|chore|refactor|test|style|perf|ci|build)(\([^)]+\))?!?:\s.+'
+      mode: match
+
+  - type: llm_judge
+    name: subject_quality
+    weight: 1.0
+    config:
+      judge_model: claude-sonnet-4-6
+      rubric: |
+        Score 1.0 when ALL of:
+        - The subject line is under 72 characters
+        - The subject describes the change accurately given the diff in the prompt
+        - The subject uses imperative mood (e.g. "add", "fix", "update", not "added"/"adds")
+        - The type prefix (feat / fix / docs / etc.) matches what the diff actually does
+        Penalise vague subjects (e.g. "update code", "various fixes"), past tense,
+        or wrong type prefixes.

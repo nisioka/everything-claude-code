@@ -1,0 +1,53 @@
+config:
+  executor: claude_cli
+  model: claude-sonnet-4-6
+  skill_path: skills/make-pr/SKILL.md
+  instructions: |
+    You are following the make-pr skill (Phase 4.2: Ticket Extraction).
+    Given a branch name, extract the ticket prefix in the form `[TICKET-123]` if
+    present and output ONLY that prefix wrapped in square brackets — for example:
+    `[PROJ-123]`. If the branch name has no ticket prefix, output exactly:
+    `(no ticket)` — no other text.
+
+    Recognised ticket pattern: an UPPERCASE alphabetic prefix, optional hyphen,
+    then digits — extracted from the FIRST path segment of the branch name's
+    `<type>/<rest>` form.
+
+tasks:
+  - id: branch-with-proj-prefix
+    prompt: 'Branch: feature/PROJ-123-add-login-screen'
+    expected: '[PROJ-123]'
+
+  - id: branch-with-bug-prefix
+    prompt: 'Branch: fix/BUG-42-null-pointer-on-logout'
+    expected: '[BUG-42]'
+
+  - id: branch-with-no-hyphen-prefix
+    prompt: 'Branch: feature/XXX000-new-dashboard'
+    expected: '[XXX000]'
+
+  - id: branch-without-prefix
+    prompt: 'Branch: feature/add-new-page'
+    expected: '(no ticket)'
+
+graders:
+  # Output must be EITHER a bracketed ticket prefix OR exactly "(no ticket)" —
+  # combining both shapes lets one grader-set evaluate the entire mixed task list
+  # without needing per-task grader assignment.
+  - type: regex
+    name: ticket_or_no_ticket_marker
+    weight: 1.0
+    config:
+      pattern: '^(\[[A-Z]+-?\d+\]|\(no ticket\))$'
+      mode: match
+      flags: ["MULTILINE"]
+
+  # Negative assertion (Req 5.4): output must not leak the raw branch path
+  # (e.g. "feature/PROJ-123-add-login-screen") which would indicate the model
+  # echoed the input instead of extracting the prefix.
+  - type: regex
+    name: no_branch_path_echo
+    weight: 0.5
+    config:
+      pattern: 'feature/|fix/'
+      mode: no_match

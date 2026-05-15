@@ -1,0 +1,41 @@
+diff --git a/src/api/middleware/rate_limit.py b/src/api/middleware/rate_limit.py
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/api/middleware/rate_limit.py
+@@ -0,0 +1,42 @@
++"""Per-user rate limiting middleware backed by Redis sliding window."""
++
++import time
++from typing import Callable
++
++import redis
++from fastapi import Request, Response
++
++_RATE_LIMIT_PER_MINUTE = 60
++_WINDOW_SECONDS = 60
++
++
++def make_rate_limiter(client: redis.Redis) -> Callable:
++    async def middleware(request: Request, call_next):
++        user_id = request.headers.get("x-user-id", "anon")
++        bucket_key = f"rl:{user_id}:{int(time.time() / _WINDOW_SECONDS)}"
++        count = client.incr(bucket_key)
++        if count == 1:
++            client.expire(bucket_key, _WINDOW_SECONDS * 2)
++        if count > _RATE_LIMIT_PER_MINUTE:
++            return Response(status_code=429, content="rate limit exceeded")
++        return await call_next(request)
++
++    return middleware
+diff --git a/src/api/main.py b/src/api/main.py
+index e4f5g6h..i7j8k9l 100644
+--- a/src/api/main.py
++++ b/src/api/main.py
+@@ -3,6 +3,7 @@ from fastapi import FastAPI
+ from src.api.routes import router
++from src.api.middleware.rate_limit import make_rate_limiter
+
+ app = FastAPI()
+ app.include_router(router)
++app.middleware("http")(make_rate_limiter(redis_client))
