@@ -294,8 +294,8 @@ RESULT=""
 while :; do
   # 新規レビューコメントの検知（レビュー / インライン / 会話）
   N=$(gh api "repos/{owner}/{repo}/pulls/$PR/reviews"   --jq "[.[]|select(.submitted_at>\"$BASELINE\")]|length" 2>/dev/null || echo 0)
-  N=$((N + $(gh api "repos/{owner}/{repo}/pulls/$PR/comments"  --jq "[.[]|select(.created_at>\"$BASELINE\")]|length" 2>/dev/null || echo 0)))
-  N=$((N + $(gh api "repos/{owner}/{repo}/issues/$PR/comments" --jq "[.[]|select(.created_at>\"$BASELINE\")]|length" 2>/dev/null || echo 0)))
+  N=$((N + $(gh api "repos/{owner}/{repo}/pulls/$PR/comments?since=$BASELINE"  --jq 'length' 2>/dev/null || echo 0)))
+  N=$((N + $(gh api "repos/{owner}/{repo}/issues/$PR/comments?since=$BASELINE" --jq 'length' 2>/dev/null || echo 0)))
   if [ "$N" -gt 0 ]; then RESULT="COMMENTS"; break; fi
 
   # CI チェックの状態（gh pr view の statusCheckRollup を使用）
