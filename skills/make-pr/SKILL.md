@@ -364,7 +364,7 @@ git push -u origin <branch-name>
 3. **新たな指摘があれば** → 5.3〜5.6 を繰り返す（`LAST_FETCH_TIMESTAMP` も更新される）
 4. **新たな指摘がなければ** → 完了
 
-**ループ上限: 2回**（初回 + 再レビュー1回の計2ラウンド）
+**ループ上限: 5回**（初回 + 再レビュー4回の計5ラウンド）
 
 上限到達時:
 - 残存する未対応コメントを最終レポートに記載
@@ -412,7 +412,7 @@ BOT REVIEW RESPONSE:
   [ ] Delegate fixes to appropriate sub-agents
   [ ] Commit and push fixes
   [ ] Request re-review (/gemini review)
-  [ ] Re-check loop (max 2 rounds)
+  [ ] Re-check loop (max 5 rounds)
   [ ] Report final status to user
 ```
 
@@ -430,7 +430,7 @@ BOT REVIEW RESPONSE:
 | No remote base branch found | Ask user which branch to target |
 | `gh` CLI not available | Report error, provide manual PR URL |
 | Bot review fetch fails | Warn user, skip Phase 5 |
-| Bot review loop limit reached (2 rounds) | Report remaining issues, ask user for manual review |
+| Bot review loop limit reached (5 rounds) | Report remaining issues, ask user for manual review |
 | Sub-agent fix fails | Report error, mark as unresolved, continue with next item |
 | Push fails during bot review fix (Phase 5.5) | Follow Phase 3.3 rules: STOP and ask user |
 | Re-review request fails (`gh pr comment`) | Warn user, continue to next loop iteration |
