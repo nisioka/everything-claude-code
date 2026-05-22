@@ -309,7 +309,6 @@ while :; do
   sleep 60
 done
 echo "WAIT_RESULT=$RESULT"
-echo "WAIT_BASELINE=$BASELINE"
 ```
 
 待機終了後、`WAIT_RESULT` に応じて分岐する:
@@ -368,7 +367,7 @@ gh pr view <PR_NUMBER> --json statusCheckRollup --jq \
   '.statusCheckRollup[] | select(((.conclusion // .state) // "") | test("FAILURE|ERROR|CANCELLED|TIMED_OUT")) | {name, result: (.conclusion // .state), url: (.detailsUrl // .targetUrl)}'
 
 # GitHub Actions の失敗ログ（該当ブランチ直近の失敗 run）
-RUN_ID=$(gh run list --branch <branch-name> --status failure --limit 1 --json databaseId -q '.[0].databaseId')
+RUN_ID=$(gh run list --branch "$(git branch --show-current)" --status failure --limit 1 --json databaseId -q '.[0].databaseId')
 [ -n "$RUN_ID" ] && gh run view "$RUN_ID" --log-failed
 ```
 
@@ -435,7 +434,7 @@ git push -u origin <branch-name>
 
 プッシュ後、再度ボットレビューと CI が走るため:
 
-1. **`LAST_FETCH_TIMESTAMP` を直近の `WAIT_BASELINE`（最後にコメントを取得した時刻）に更新**
+1. **`LAST_FETCH_TIMESTAMP` を `pr-review-responder` が返した最新の `Fetch Timestamp` に更新**（5.2 のタイムスタンプ管理に従う）
 2. **5.1 のスマート待機を再実行**（バックグラウンド。`COMMENTS` / `CI_DONE` / `NO_CI` / `TIMEOUT` を再判定）
 3. **新たなレビュー指摘または CI 失敗があれば** → 5.2〜5.6 を繰り返す
 4. **レビュー指摘も CI 失敗も無ければ** → 完了
