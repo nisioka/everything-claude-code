@@ -260,20 +260,69 @@ Ask the user whether they want a regular PR or a draft PR.
 
 ---
 
-## Phase 5: Post-PR Bot Review Response
+## Phase 5: Post-PR Bot Review & CI Response
 
-PR作成後、自動レビューボット（Gemini Code Assist 等）のフィードバックに対応する。
+PR作成後、自動レビューボット（Gemini Code Assist 等）のフィードバックと CI チェック結果に対応する。
 
-### 5.1 レビュー待機
+### 5.1 スマート待機（レビューコメント / CI を監視）
 
-ボットレビューの完了を待つため **5分間待機** する:
+固定の `sleep` ではなく、PR の状態を定期ポーリングし、対応すべきイベントが発生した
+時点で待機を抜ける。レビューコメントが早く来た場合は CI 完了を待たずに対応へ進み、
+コメントが無い場合は CI 完了まで待つ。
+
+**待機を抜ける条件（先に成立したもの）:**
+
+| `WAIT_RESULT` | 条件 |
+|---|---|
+| `COMMENTS` | 新規レビューコメント（レビュー / インライン / 会話）を検知 |
+| `CI_DONE`  | CI チェックが全て完了（`pending` が 0 件） |
+| `NO_CI`    | CI チェックが存在せず、猶予 10 分を経過 |
+| `TIMEOUT`  | 上限 **2時間**（7200秒）を経過 |
+
+**ポーリング間隔: 60秒。**
+
+> **重要**: この監視は最大2時間かかり得るためフォアグラウンドのコマンドタイムアウトを
+> 超える。**必ずバックグラウンドで実行**し（`run_in_background: true`）、完了通知を
+> 受け取ってから `WAIT_RESULT` に応じて分岐すること。
 
 ```bash
-echo "⏳ ボットレビュー完了を待機中（5分）..."
-sleep 300
+PR=<PR_NUMBER>
+# baseline: 初回は PR 作成時刻、再ループ時は LAST_FETCH_TIMESTAMP
+BASELINE="${LAST_FETCH_TIMESTAMP:-$(gh pr view "$PR" --json createdAt -q '.createdAt')}"
+START=$(date +%s); DEADLINE=$((START + 7200)); GRACE=$((START + 600))
+RESULT=""
+while :; do
+  # 新規レビューコメントの検知（レビュー / インライン / 会話）
+  N=$(gh api "repos/{owner}/{repo}/pulls/$PR/reviews"   --jq "[.[]|select(.submitted_at>\"$BASELINE\")]|length" 2>/dev/null || echo 0)
+  N=$((N + $(gh api "repos/{owner}/{repo}/pulls/$PR/comments?since=$BASELINE"  --jq 'length' 2>/dev/null || echo 0)))
+  N=$((N + $(gh api "repos/{owner}/{repo}/issues/$PR/comments?since=$BASELINE" --jq 'length' 2>/dev/null || echo 0)))
+  if [ "$N" -gt 0 ]; then RESULT="COMMENTS"; break; fi
+
+  # CI チェックの状態（gh pr view の statusCheckRollup を使用）
+  TOTAL=$(gh pr view "$PR" --json statusCheckRollup --jq '.statusCheckRollup | length' 2>/dev/null || echo 0)
+  PEND=$(gh pr view "$PR" --json statusCheckRollup --jq '[.statusCheckRollup[] | select((.__typename=="CheckRun" and .status!="COMPLETED") or (.__typename=="StatusContext" and (.state=="PENDING" or .state=="EXPECTED")))] | length' 2>/dev/null || echo 0)
+  TOTAL=${TOTAL:-0}; PEND=${PEND:-0}
+  if [ "$TOTAL" -gt 0 ] && [ "$PEND" -eq 0 ]; then RESULT="CI_DONE"; break; fi
+  if [ "$TOTAL" -eq 0 ] && [ "$(date +%s)" -ge "$GRACE" ]; then RESULT="NO_CI"; break; fi
+  if [ "$(date +%s)" -ge "$DEADLINE" ]; then RESULT="TIMEOUT"; break; fi
+
+  sleep 60
+done
+echo "WAIT_RESULT=$RESULT"
 ```
 
-### 5.2 レビューコメント取得・解析
+待機終了後、`WAIT_RESULT` に応じて分岐する:
+
+| `WAIT_RESULT` | 次のアクション |
+|---|---|
+| `COMMENTS` | 5.2 へ（レビューコメントを取得・対応。CI 完了は待たない） |
+| `CI_DONE`  | 5.2 へ（レビューコメント取得 + CI 失敗の確認の両方を実施） |
+| `NO_CI`    | 5.2 へ（レビューコメント対応のみ。CI 確認はスキップ） |
+| `TIMEOUT`  | 5.2 で現時点の状態を取得して可能な範囲で対応し、残りは最終レポートに記載 |
+
+### 5.2 レビューコメント・CI 結果の取得
+
+#### 5.2.1 レビューコメント取得・解析
 
 `pr-review-responder` エージェントを使用してPRのレビューコメントを取得・解析する。
 
@@ -307,20 +356,46 @@ Task tool を使用:
 - 元のコメント本文
 - **Fetch Timestamp**（次回ループ用）
 
+#### 5.2.2 CI 失敗の取得
+
+`WAIT_RESULT` が `CI_DONE` または `TIMEOUT` の場合のみ実施する（`COMMENTS` / `NO_CI`
+ではスキップ）。CI チェック結果を確認し、失敗があればログを取得する:
+
+```bash
+# 失敗・エラーになったチェックを一覧
+gh pr view <PR_NUMBER> --json statusCheckRollup --jq \
+  '.statusCheckRollup[] | select(((.conclusion // .state) // "") | test("FAILURE|ERROR|CANCELLED|TIMED_OUT")) | {name, result: (.conclusion // .state), url: (.detailsUrl // .targetUrl)}'
+
+# GitHub Actions の失敗ログ（該当ブランチ直近の失敗 run）
+RUN_ID=$(gh run list --branch "$(git branch --show-current)" --status failure --limit 1 --json databaseId -q '.[0].databaseId')
+[ -n "$RUN_ID" ] && gh run view "$RUN_ID" --log-failed
+```
+
+失敗ログから原因（ビルド / 型 / Lint / テスト失敗など）を特定し、修正対象とする。
+失敗チェックが無い（全て `pass` / `skip`）場合は CI 対応不要。
+
 ### 5.3 ユーザー確認
 
-検出された指摘をユーザーに提示し、対応方針を確認する:
+検出されたレビュー指摘と CI 失敗をまとめてユーザーに提示し、対応方針を確認する:
 
-- 各指摘の severity、カテゴリ、概要を一覧表示
+- レビュー指摘: severity、カテゴリ、概要を一覧表示
+- CI 失敗: チェック名と失敗内容の要約を一覧表示
 - ユーザーに「全て対応」「選択して対応」「スキップ」を選択させる
-- ユーザーが選択した指摘のみ修正対象とする
+- ユーザーが選択した項目のみ修正対象とする
 
 ### 5.4 サブエージェントに委任して修正
 
-`skills/agent-router/SKILL.md` の **Review-Category Routing Table** に従って、各指摘を適切なサブエージェントに委任する。
+`skills/agent-router/SKILL.md` の **Review-Category Routing Table** に従って、各指摘を適切なサブエージェントに委任する。CI 失敗も内容に応じて委任する:
+
+| 対象 | 委任先（例） |
+|---|---|
+| レビュー指摘 | カテゴリ別（agent-router のルーティング表に従う） |
+| ビルド / 型エラー | `ecc:build-error-resolver` |
+| テスト失敗 | 実装担当エージェント（`ecc:tdd-guide` 等） |
+| Lint / フォーマット崩れ | `ecc:refactor-cleaner` 等 |
 
 サブエージェントへの指示内容は agent-router スキルの **Standard Invocation Pattern** に従い、以下を含める:
-- 元のレビューコメント本文（コンテキスト理解のため）
+- 元のレビューコメント本文 / CI 失敗ログの要点（コンテキスト理解のため）
 - 対象ファイル・行番号
 - 修正方針
 
@@ -355,24 +430,24 @@ git push -u origin <branch-name>
 
 プロジェクトの PR 履歴やボット設定を確認し、適切なコマンドを使用すること。複数のボットが導入されている場合は、それぞれに再レビューを依頼する。
 
-### 5.7 再レビュー確認ループ
+### 5.7 再確認ループ
 
-プッシュ後、再度ボットレビューが走る可能性があるため:
+プッシュ後、再度ボットレビューと CI が走るため:
 
-1. **再度5分待機**
-2. **`LAST_FETCH_TIMESTAMP` を `since` として渡し、新しいコメントのみ取得**（5.2 の2回目以降の手順に従う）
-3. **新たな指摘があれば** → 5.3〜5.6 を繰り返す（`LAST_FETCH_TIMESTAMP` も更新される）
-4. **新たな指摘がなければ** → 完了
+1. **`LAST_FETCH_TIMESTAMP` を `pr-review-responder` が返した最新の `Fetch Timestamp` に更新**（5.2 のタイムスタンプ管理に従う）
+2. **5.1 のスマート待機を再実行**（バックグラウンド。`COMMENTS` / `CI_DONE` / `NO_CI` / `TIMEOUT` を再判定）
+3. **新たなレビュー指摘または CI 失敗があれば** → 5.2〜5.6 を繰り返す
+4. **レビュー指摘も CI 失敗も無ければ** → 完了
 
-**ループ上限: 5回**（初回 + 再レビュー4回の計5ラウンド）
+**ループ上限: 5回**（初回 + 再確認4回の計5ラウンド）
 
 上限到達時:
-- 残存する未対応コメントを最終レポートに記載
+- 残存する未対応コメント・CI 失敗を最終レポートに記載
 - ユーザーに手動対応を促す
 
 ### 5.8 対応不要な場合
 
-`pr-review-responder` が「対応可能な指摘なし」と判断した場合:
+`pr-review-responder` が「対応可能な指摘なし」と判断し、かつ CI 失敗も無い場合:
 - Phase 5 をスキップし、そのまま完了とする
 
 ---
@@ -405,11 +480,11 @@ PULL REQUEST:
   [ ] Create PR (or draft PR)
   [ ] Report PR URL to user
 
-BOT REVIEW RESPONSE:
-  [ ] Wait 5 minutes for bot review
-  [ ] Fetch and analyze review comments (pr-review-responder)
+BOT REVIEW & CI RESPONSE:
+  [ ] Smart-wait: poll for review comments / CI completion (max 2h, exits early on comments)
+  [ ] Fetch review comments (pr-review-responder) and CI failures
   [ ] Present findings to user for confirmation
-  [ ] Delegate fixes to appropriate sub-agents
+  [ ] Delegate fixes to appropriate sub-agents (review comments + CI failures)
   [ ] Commit and push fixes
   [ ] Request re-review (/gemini review)
   [ ] Re-check loop (max 5 rounds)
@@ -429,7 +504,9 @@ BOT REVIEW RESPONSE:
 | Merge conflicts with base | Warn user, ask if proceed |
 | No remote base branch found | Ask user which branch to target |
 | `gh` CLI not available | Report error, provide manual PR URL |
-| Bot review fetch fails | Warn user, skip Phase 5 |
+| Bot review / CI fetch fails | Warn user, skip the affected part of Phase 5 |
+| Smart-wait reaches 2h timeout | Handle whatever state is available, report the rest to user |
+| CI failure cannot be auto-fixed | Report failing checks and logs, ask user for manual fix |
 | Bot review loop limit reached (5 rounds) | Report remaining issues, ask user for manual review |
 | Sub-agent fix fails | Report error, mark as unresolved, continue with next item |
 | Push fails during bot review fix (Phase 5.5) | Follow Phase 3.3 rules: STOP and ask user |
