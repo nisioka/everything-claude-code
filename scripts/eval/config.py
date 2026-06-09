@@ -1,7 +1,5 @@
 """eval.yaml schema (Pydantic) + ConfigLoader (YAML → EvalConfig).
 
-Implements requirements 1.1–1.8.
-
 The schema is intentionally a Waza-compatible subset: top-level `config` (executor /
 model / skill_path / instructions), `tasks` (id / prompt / expected / fixtures), and
 `graders` (type / name / weight / config). All models are frozen so EvalConfig instances

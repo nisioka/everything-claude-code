@@ -524,3 +524,11 @@ Before committing any entity or repository change, verify:
 - [ ] `spring.jpa.open-in-view=false` is set
 
 **Remember**: Entities are not DTOs. Fetch lazily, project to DTOs at the boundary, and let Flyway own the schema. `CascadeType.REFRESH` and `CascadeType.ALL` are banned. Every `@ManyToOne` must be `LAZY`. Every collection access in a loop is a potential N+1.
+
+## Code Comments
+
+Follow the comment rules in `rules/coding-style.md`: comment the code's intent, never its history.
+
+- Do not leave comments that narrate implementation history — review feedback, bugs found during testing, "changed from X", review rounds. Put that in the commit message, the PR description, or your reply to the user.
+- Do not embed spec or requirement IDs in code (e.g. `Requirement 3.5`, task numbers); they reference transient process docs the reader cannot follow.
+- Comment only what the code cannot convey on its own (e.g. a non-obvious operational constraint).

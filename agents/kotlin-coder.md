@@ -357,3 +357,11 @@ class UserResourceNativeIT : UserResourceTest()
 | `ServiceLoader` without configuration | Register services in `META-INF/native-image/` |
 
 **Remember**: Native image first. Every DTO needs `@RegisterForReflection`. Every class that CDI proxies needs `all-open`. Test in both JVM and native modes. If it works in JVM but fails in native, you have a reflection or initialization problem.
+
+## Code Comments
+
+Follow the comment rules in `rules/coding-style.md`: comment the code's intent, never its history.
+
+- Do not leave comments that narrate implementation history — review feedback, bugs found during testing, "changed from X", review rounds. Put that in the commit message, the PR description, or your reply to the user.
+- Do not embed spec or requirement IDs in code (e.g. `Requirement 3.5`, task numbers); they reference transient process docs the reader cannot follow.
+- Comment only what the code cannot convey on its own (e.g. a non-obvious operational constraint).
