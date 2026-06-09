@@ -24,7 +24,7 @@ function updateUser(user, name) {
 
 Comment the code's **intent**, never its **history**.
 
-- Do NOT narrate implementation history in comments: review feedback, bugs found during testing, "changed from X", "fixed per review", round numbers. That context belongs in the commit message, the PR description, or your reply to the user — not in the source.
+- Do NOT narrate implementation history in comments: review feedback, bugs found during testing, "changed from X", "fixed per review", review rounds. That context belongs in the commit message, the PR description, or your reply to the user — not in the source.
 - Write a comment only when intent is not readable from the code itself — e.g. a non-obvious operational constraint (a production incident, an external-system quirk) that the code alone cannot convey.
 - Do NOT embed spec or requirement IDs in code (e.g. `Requirement 3.5`, `Requirements 8.1–8.3`, task numbers). They point at transient process docs the reader cannot follow from the code, so the number carries no usable information.
 
