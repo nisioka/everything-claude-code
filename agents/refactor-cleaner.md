@@ -304,3 +304,11 @@ After cleanup session:
 ---
 
 **Remember**: Dead code is technical debt. Regular cleanup keeps the codebase maintainable and fast. But safety first - never remove code without understanding why it exists.
+
+## Code Comments
+
+Follow the comment rules in `rules/coding-style.md`: comment the code's intent, never its history.
+
+- Do not leave comments that narrate implementation history — review feedback, bugs found during testing, "changed from X", round numbers. Put that in the commit message, the PR description, or your reply to the user.
+- Do not embed spec or requirement IDs in code (e.g. `Requirement 3.5`, task numbers); they reference transient process docs the reader cannot follow.
+- Comment only what the code cannot convey on its own (e.g. a non-obvious operational constraint).

@@ -1,4 +1,4 @@
-"""UsageSnapshot — token usage from a single API call (Requirements 8.1–8.3).
+"""UsageSnapshot — token usage from a single API call.
 
 Kept out of executors/__init__.py to avoid an import cycle (executors -> usage -> ...).
 """

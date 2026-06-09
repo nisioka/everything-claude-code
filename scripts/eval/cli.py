@@ -1,6 +1,6 @@
 """CLI entry point for the eval harness.
 
-Exit codes (Requirement 4.5):
+Exit codes:
 - 0: every task passed
 - 1: at least one task failed (model output didn't satisfy graders)
 - 2: configuration / runtime error (YAML invalid, executor missing, missing API key, etc.)

@@ -1,8 +1,4 @@
-"""Grader plugin boundary: ABC, registry, GraderResult, and aggregation helpers.
-
-LlmJudgeGrader is added in task 7 with the same self-registering pattern as the
-deterministic graders below.
-"""
+"""Grader plugin boundary: ABC, registry, GraderResult, and aggregation helpers."""
 
 from __future__ import annotations
 
@@ -62,11 +58,11 @@ def build_grader(name: str, grader_type: str, config: dict[str, Any]) -> Grader:
 
 # A reason starting with one of these markers indicates the grader itself failed
 # (network / config error), not that the model output was bad. The orchestrator
-# uses this to mark the task as `error` rather than `fail` (Requirement 3.7).
+# uses this to mark the task as `error` rather than `fail`.
 _ERROR_MARKERS = ("GRADER_ERROR", "JUDGE_ERROR")
 
-# Default pass threshold (Requirement 3.5). Graders may apply their own per-result
-# threshold via GraderResult.passed; this threshold only governs the task-level
+# Default pass threshold. Graders may apply their own per-result threshold via
+# GraderResult.passed; this threshold only governs the task-level
 # weighted_score → status decision.
 DEFAULT_PASS_THRESHOLD = 0.5
 

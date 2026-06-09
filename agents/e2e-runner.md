@@ -706,3 +706,11 @@ After E2E test run:
 ---
 
 **Remember**: E2E tests are your last line of defense before production. They catch integration issues that unit tests miss. Invest time in making them stable, fast, and comprehensive. For Example Project, focus especially on financial flows - one bug could cost users real money.
+
+## Code Comments
+
+Follow the comment rules in `rules/coding-style.md`: comment the code's intent, never its history.
+
+- Do not leave comments that narrate implementation history — review feedback, bugs found during testing, "changed from X", round numbers. Put that in the commit message, the PR description, or your reply to the user.
+- Do not embed spec or requirement IDs in code (e.g. `Requirement 3.5`, task numbers); they reference transient process docs the reader cannot follow.
+- Comment only what the code cannot convey on its own (e.g. a non-obvious operational constraint).
