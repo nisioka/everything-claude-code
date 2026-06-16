@@ -1,6 +1,6 @@
 {
   "name": "ecc",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Complete collection of battle-tested Claude Code configs from an Anthropic hackathon winner - agents, skills, hooks, commands, and rules evolved over 10+ months of intensive daily use",
   "author": {
     "name": "nisioka",
