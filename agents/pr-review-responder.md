@@ -45,10 +45,19 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments?since={since}" --pagina
 
 ### Step 2: Filter Actionable Comments
 
+**基本方針: 迷ったら拾う（default to actionable）。** 新しく導入されたレビューボットや見慣れない出力フォーマットのコメントを「情報提供のみ」と早合点して落とさないこと。除外は確実に非アクションと判断できる場合に限る。
+
 Focus on:
-- **Bot review comments** (automated reviewers like CodeRabbit, Copilot, etc.)
+- **Bot review comments**（CodeRabbit / Copilot / Gemini など。**列挙したボットに限らず、未知のボットも対象に含める**）
 - **Human review comments** with requested changes
-- Ignore: approval-only comments, resolved comments, purely informational comments
+- 判断がつかないコメントは **actionable 側に含める**（severity は LOW で構わない）
+
+Ignore する（= 非アクション）のは、以下のように**明確に**対応不要と分かるものだけ:
+- 純粋な承認のみ（例: `LGTM`、`Approved`、絵文字/スタンプのみ）
+- 既に resolved 済みのスレッド
+- 「対応しました」等の単なる謝辞・了解レス
+
+> 上記に当てはまらない限り、「情報提供っぽい」「フォーマットが見慣れない」という理由だけで除外しないこと。指摘なのか情報なのか曖昧なものは拾い、出力の Actionable Items 側に LOW として残す。
 
 For each comment, extract:
 - **file**: Target file path
