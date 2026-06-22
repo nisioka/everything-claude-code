@@ -70,6 +70,7 @@ everything-claude-code/
 |   |-- security-review/            # セキュリティチェックリスト
 |   |-- eval-harness/               # 検証ループ評価（ロングフォームガイド）
 |   |-- verification-loop/          # 継続的検証（ロングフォームガイド）
+|   |-- japanese-tech-writing/      # 日本語技術文書の文章規範
 |
 |-- commands/         # クイック実行用のスラッシュコマンド
 |   |-- tdd.md              # /tdd - テスト駆動開発
