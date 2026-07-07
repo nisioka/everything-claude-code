@@ -94,7 +94,7 @@ def test_cli_executor_override(tmp_path: Path) -> None:
             """
             config:
               executor: claude_cli
-              model: claude-sonnet-4-6
+              model: claude-sonnet-5
             tasks:
               - id: t1
                 prompt: p

@@ -99,7 +99,7 @@ claude -p \
 ```yaml
 config:
   executor: claude_cli             # "mock" でも可
-  model: claude-sonnet-4-6         # `claude --model` が受け付ける名前 (sonnet/haiku のエイリアスも可)
+  model: claude-sonnet-5         # `claude --model` が受け付ける名前 (sonnet/haiku のエイリアスも可)
   skill_path: skills/make-pr/SKILL.md   # system prompt の前半に挿入
   instructions: |
     対象フェーズの固定 system prompt (skill_path の前に置かれる)
@@ -122,7 +122,7 @@ graders:
     name: subject_quality
     weight: 1.0
     config:
-      judge_model: claude-sonnet-4-6
+      judge_model: claude-sonnet-5
       threshold: 0.7               # passed = (score >= threshold)
       timeout_sec: 180             # judge CLI 1 呼び出しの上限
       rubric: |

@@ -44,7 +44,7 @@ class RunnerConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     executor: Literal["mock", "claude_cli"] = "mock"
-    model: str = "claude-sonnet-4-6"
+    model: str = "claude-sonnet-5"
     skill_path: Path | None = None
     instructions: str = ""
 

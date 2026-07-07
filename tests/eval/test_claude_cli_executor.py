@@ -49,7 +49,7 @@ def _build_executor(recorder: _Recorder) -> ClaudeCliExecutor:
     `run_claude_cli` ignores the executor's runner arg by default, so we monkeypatch
     `subprocess.run` (which the runner uses) at the module level.
     """
-    return ClaudeCliExecutor(model="claude-sonnet-4-6")
+    return ClaudeCliExecutor(model="claude-sonnet-5")
 
 
 # ---- system prompt assembly ------------------------------------------------

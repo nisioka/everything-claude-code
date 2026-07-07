@@ -27,7 +27,7 @@ def _ok_payload(text: str = "hello", **usage_overrides) -> str:
             "is_error": False,
             "result": text,
             "usage": usage,
-            "modelUsage": {"claude-sonnet-4-6": {"inputTokens": 10}},
+            "modelUsage": {"claude-sonnet-5": {"inputTokens": 10}},
             "total_cost_usd": 0.001,
         }
     )
@@ -64,13 +64,13 @@ def test_runs_and_parses_usage() -> None:
     result = run_claude_cli(
         prompt="say hi",
         system_prompt="be brief",
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-5",
         runner=rec,
     )
     assert result.text == "hi"
     assert result.usage.cache_read_input_tokens == 128
     assert result.cost_usd == pytest.approx(0.001)
-    assert result.model == "claude-sonnet-4-6"
+    assert result.model == "claude-sonnet-5"
 
 
 def test_prompt_is_piped_via_stdin_not_argv() -> None:

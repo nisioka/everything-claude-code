@@ -2,20 +2,27 @@
 
 ## Model Selection Strategy
 
-**Haiku 4.5** (90% of Sonnet capability, 3x cost savings):
+Choose by model tier, not by specific version — capability gaps between tiers
+shift with each generation, so verify current model capabilities and pricing
+in the official docs before hard-coding assumptions.
+
+**Haiku tier** (fastest, lowest cost):
 - Lightweight agents with frequent invocation
-- Pair programming and code generation
+- Mechanical tasks: doc updates, formatting, classification
 - Worker agents in multi-agent systems
 
-**Sonnet 4.5** (Best coding model):
-- Main development work
+**Sonnet tier** (balanced speed and capability):
+- Main development work and most coding tasks
 - Orchestrating multi-agent workflows
-- Complex coding tasks
+- Build fixes, test generation, routine refactoring
 
-**Opus 4.5** (Deepest reasoning):
+**Opus tier** (highest capability):
 - Complex architectural decisions
-- Maximum reasoning requirements
-- Research and analysis tasks
+- Long-horizon agentic work and deep debugging
+- Security-sensitive reviews, research and analysis tasks
+
+Prefer `inherit` (the session's model) for agents unless a task clearly
+benefits from a cheaper or stronger tier.
 
 ## Context Window Management
 

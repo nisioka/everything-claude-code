@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code. MUST BE USED for all code changes.
+description: Expert code review specialist for quality, security, and maintainability. Use when the user asks for a review with project-specific depth (OWASP checks, license audit, performance analysis) beyond the built-in /code-review command.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

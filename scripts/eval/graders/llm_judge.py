@@ -17,7 +17,7 @@ from scripts.eval.graders import Grader, GraderResult, register_grader
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
+DEFAULT_JUDGE_MODEL = "claude-sonnet-5"
 
 _JUDGE_SYSTEM = (
     "You are an evaluation judge. Read the rubric, the model output, and the expected "

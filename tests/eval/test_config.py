@@ -24,7 +24,7 @@ from scripts.eval.errors import ConfigValidationError
 def test_runner_config_defaults() -> None:
     cfg = RunnerConfig()
     assert cfg.executor == "mock"
-    assert cfg.model == "claude-sonnet-4-6"
+    assert cfg.model == "claude-sonnet-5"
     assert cfg.skill_path is None
     assert cfg.instructions == ""
 
@@ -69,7 +69,7 @@ def yaml_dir(tmp_path: Path) -> Path:
             """
             config:
               executor: mock
-              model: claude-sonnet-4-6
+              model: claude-sonnet-5
               instructions: "Generate a commit message."
 
             tasks:
@@ -101,7 +101,7 @@ def yaml_dir(tmp_path: Path) -> Path:
                 name: subject
                 weight: 1.5
                 config:
-                  judge_model: claude-sonnet-4-6
+                  judge_model: claude-sonnet-5
                   rubric: "Subject is concise."
             """
         ).strip(),
