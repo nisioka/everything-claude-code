@@ -1,6 +1,6 @@
 config:
   executor: claude_cli
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   skill_path: skills/make-pr/SKILL.md
   instructions: |
     You are following the make-pr skill (Phase 4.2: Ticket Extraction).

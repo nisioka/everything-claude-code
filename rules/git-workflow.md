@@ -36,7 +36,7 @@ When creating PRs:
    - Verify 80%+ coverage
 
 3. **Code Review**
-   - Use **code-reviewer** agent immediately after writing code
+   - Run /code-review before committing (use the **code-reviewer** agent when project-specific depth is needed)
    - Address CRITICAL and HIGH issues
    - Fix MEDIUM issues when possible
 

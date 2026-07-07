@@ -33,12 +33,12 @@ model: opus                # 使用するモデル（opus/sonnet/haiku）
 | エージェント | 用途 | 詳細 | モデル | ツール |
 |-------------|------|------|--------|--------|
 | **architect** | システム設計・アーキテクチャ判断 | アーキテクチャレビュー、トレードオフ分析、ADR作成、スケーラビリティ計画 | opus | Read, Grep, Glob |
-| **build-error-resolver** | TypeScript/ビルドエラー解決 | 最小diffでのエラー修正、インポート/依存関係の問題解決（アーキテクチャ変更はしない） | opus | Read, Write, Edit, Bash, Grep, Glob |
-| **code-reviewer** | コード品質・セキュリティレビュー | OWASP Top 10チェック、パフォーマンス・コード品質評価、Critical/Warning/Suggestionで分類 | opus | Read, Grep, Glob, Bash |
-| **doc-updater** | ドキュメント・コードマップ更新 | コードマップ生成（docs/CODEMAPS/）、ts-morphでAST分析、READMEの自動更新 | opus | Read, Write, Edit, Bash, Grep, Glob |
-| **e2e-runner** | Playwright E2Eテスト | Playwright設定・テスト作成、Page Object Modelパターン、フレーキーテスト管理 | opus | Read, Write, Edit, Bash, Grep, Glob |
+| **build-error-resolver** | TypeScript/ビルドエラー解決 | 最小diffでのエラー修正、インポート/依存関係の問題解決（アーキテクチャ変更はしない） | sonnet | Read, Write, Edit, Bash, Grep, Glob |
+| **code-reviewer** | コード品質・セキュリティレビュー | コミット前の `/code-review` を超える深掘り（OWASP Top 10、ライセンス監査、性能分析など）が必要な場合に呼び出す。Critical/Warning/Suggestionで分類 | opus | Read, Grep, Glob, Bash |
+| **doc-updater** | ドキュメント・コードマップ更新 | コードマップ生成（docs/CODEMAPS/）、ts-morphでAST分析、READMEの自動更新 | haiku | Read, Write, Edit, Bash, Grep, Glob |
+| **e2e-runner** | Playwright E2Eテスト | Playwright設定・テスト作成、Page Object Modelパターン、フレーキーテスト管理 | sonnet | Read, Write, Edit, Bash, Grep, Glob |
 | ~~planner~~ | ~~機能実装の計画作成~~ | **削除済み** - [cc-sdd](https://github.com/gotalab/cc-sdd)を使用 | - | - |
-| **refactor-cleaner** | デッドコード削除・リファクタリング | knip, depcheck, ts-pruneでデッドコード検出、DELETION_LOG.md管理、安全な削除プロセス | opus | Read, Write, Edit, Bash, Grep, Glob |
+| **refactor-cleaner** | デッドコード削除・リファクタリング | knip, depcheck, ts-pruneでデッドコード検出、DELETION_LOG.md管理、安全な削除プロセス | sonnet | Read, Write, Edit, Bash, Grep, Glob |
 | **security-reviewer** | セキュリティ脆弱性検出 | OWASP Top 10チェック、シークレット検出、npm audit実行 | opus | Read, Write, Edit, Bash, Grep, Glob |
 | **tdd-guide** | テスト駆動開発 | Red-Green-Refactorサイクル、80%+カバレッジ目標、モック戦略 | opus | Read, Write, Edit, Bash, Grep |
 
@@ -52,12 +52,14 @@ model: opus                # 使用するモデル（opus/sonnet/haiku）
 
 ### 2. モデル選択の最適化
 
-現在すべて`opus`ですが、コスト削減のため以下を検討：
+軽タスク系は既に軽量モデルに変更済み（doc-updater→haiku、build-error-resolver/refactor-cleaner/e2e-runner→sonnet）。判断・実装特化系（architect、code-reviewer、security-reviewer、tdd-guide、各種 coder）は opus を維持。
 
-| エージェント | 現在 | 提案 | 理由 |
+さらにコストを抑えたい場合は、`model: inherit`（セッションのモデルを継承）も検討：
+
+| エージェント | 現在 | さらに削減する場合 | 理由 |
 |-------------|------|------|------|
-| doc-updater | opus | sonnet | ドキュメント生成はsonnetでも動作可能 |
-| refactor-cleaner | opus | sonnet/haiku | 分析系は軽量モデルでも可 |
+| kotlin-coder / nextjs-coder 等の coder 系 | opus | sonnet | 近年の Sonnet はコーディング性能が Opus に接近 |
+| tdd-guide | opus | sonnet | テスト作成は定型的な部分が多い |
 
 ### 3. プロジェクト固有のカスタマイズ
 

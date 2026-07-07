@@ -81,7 +81,7 @@ If your suite uses a `list_match` grader with `parse_mode: json_array`, also set
 ```yaml
 config:
   executor: claude_cli       # or "mock"
-  model: claude-sonnet-4-6
+  model: claude-sonnet-5
   skill_path: skills/make-pr/SKILL.md  # auto-cached as a system block
   instructions: |
     Fixed system prompt for the eval (also cached).
@@ -108,7 +108,7 @@ graders:
   - type: llm_judge        # rubric-based scoring via a separate Claude call
     name: subject_quality
     config:
-      judge_model: claude-sonnet-4-6
+      judge_model: claude-sonnet-5
       rubric: |
         Score 1.0 when subject is concise (<72 chars), imperative mood, ...
 ```

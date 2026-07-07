@@ -54,7 +54,7 @@ def _make_grader(responses, **config_overrides):
     runner = _Runner(responses)
     config = {
         "rubric": "Subject is concise and imperative.",
-        "judge_model": "claude-sonnet-4-6",
+        "judge_model": "claude-sonnet-5",
         **config_overrides,
     }
     return LlmJudgeGrader(name="judge", config=config, runner=runner), runner
@@ -223,7 +223,7 @@ def test_orchestrator_marks_task_error_on_judge_failure(tmp_path, monkeypatch) -
                 name: judge
                 config:
                   rubric: "anything"
-                  judge_model: "claude-sonnet-4-6"
+                  judge_model: "claude-sonnet-5"
             """
         ).strip(),
         encoding="utf-8",

@@ -9,7 +9,7 @@ Located in `~/.claude/agents/`:
 | planner | Implementation planning | Complex features, refactoring |
 | architect | System design | Architectural decisions |
 | tdd-guide | Test-driven development | New features, bug fixes |
-| code-reviewer | Code review | After writing code |
+| code-reviewer | Code review | On request, or when a review needs project-specific depth beyond /code-review |
 | security-reviewer | Security analysis | Before commits |
 | build-error-resolver | Fix build errors | When build fails |
 | e2e-runner | E2E testing | Critical user flows |
@@ -20,9 +20,12 @@ Located in `~/.claude/agents/`:
 
 No user prompt needed:
 1. Complex feature requests - Use **planner** agent
-2. Code just written/modified - Use **code-reviewer** agent
-3. Bug fix or new feature - Use **tdd-guide** agent
-4. Architectural decision - Use **architect** agent
+2. Bug fix or new feature - Use **tdd-guide** agent
+3. Architectural decision - Use **architect** agent
+
+Code review runs via /code-review before committing; invoke the
+**code-reviewer** agent when the review needs project-specific depth
+(OWASP checks, license audit, performance analysis).
 
 ## Parallel Task Execution
 
