@@ -34,7 +34,7 @@ model: opus                # 使用するモデル（opus/sonnet/haiku）
 |-------------|------|------|--------|--------|
 | **architect** | システム設計・アーキテクチャ判断 | アーキテクチャレビュー、トレードオフ分析、ADR作成、スケーラビリティ計画 | opus | Read, Grep, Glob |
 | **build-error-resolver** | TypeScript/ビルドエラー解決 | 最小diffでのエラー修正、インポート/依存関係の問題解決（アーキテクチャ変更はしない） | sonnet | Read, Write, Edit, Bash, Grep, Glob |
-| **code-reviewer** | コード品質・セキュリティレビュー | OWASP Top 10チェック、パフォーマンス・コード品質評価、Critical/Warning/Suggestionで分類 | opus | Read, Grep, Glob, Bash |
+| **code-reviewer** | コード品質・セキュリティレビュー | コミット前の `/code-review` を超える深掘り（OWASP Top 10、ライセンス監査、性能分析など）が必要な場合に呼び出す。Critical/Warning/Suggestionで分類 | opus | Read, Grep, Glob, Bash |
 | **doc-updater** | ドキュメント・コードマップ更新 | コードマップ生成（docs/CODEMAPS/）、ts-morphでAST分析、READMEの自動更新 | haiku | Read, Write, Edit, Bash, Grep, Glob |
 | **e2e-runner** | Playwright E2Eテスト | Playwright設定・テスト作成、Page Object Modelパターン、フレーキーテスト管理 | sonnet | Read, Write, Edit, Bash, Grep, Glob |
 | ~~planner~~ | ~~機能実装の計画作成~~ | **削除済み** - [cc-sdd](https://github.com/gotalab/cc-sdd)を使用 | - | - |
