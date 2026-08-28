@@ -173,7 +173,7 @@ Overall:   [READY/NOT READY] for PR
 
 - 出力される文章はすべて**日本語**に強制される。英語で質問しても、英語のトピック名を渡しても、説明文は日本語になる（ユーザーが明示的に「英語で」と言った場合のみ例外）。
 - 専門用語には初出時に日常語の言い換えを付ける。カタカナ語の羅列を避ける。
-- 日本語が崩れないフォントスタックを指定し、折り返しは `<wbr>` / `<br>` で意味の切れ目に置く（CSS は `word-break: keep-all` と `line-break: strict`）。
+- 日本語が崩れないフォントスタックを指定する。折り返しは意味の切れ目に置き、HTML では `<wbr>` / `<br>`（CSS は `word-break: keep-all` と `line-break: strict`）、SVG では `<tspan>` の `dy` で行を送る（SVG の `<text>` では `<br>` / `<wbr>` は効かない）。
 - 1 トピックを 3〜6 パネルに分解し、身近なたとえを 1 つだけ選んで最後まで通す。
 
 **元ネタ：** [anthropics/claude-plugins-community の eli5 プラグイン](https://github.com/anthropics/claude-plugins-community/tree/main/eli5)（作者: Thariq Shihipar、MIT ライセンス）を日本語向けに拡張したもの。
