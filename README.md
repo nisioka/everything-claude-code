@@ -72,6 +72,7 @@ everything-claude-code/
 |   |-- eval-harness/               # Verification loop evaluation (Longform Guide)
 |   |-- verification-loop/          # Continuous verification (Longform Guide)
 |   |-- japanese-tech-writing/      # Japanese technical writing style guide
+|   |-- eli5/                      # Explain like I am 5 (Japanese picture explainer)
 |
 |-- commands/         # Slash commands for quick execution
 |   |-- tdd.md              # /tdd - Test-driven development
